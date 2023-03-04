@@ -27,8 +27,8 @@ RUN mkdir /wrf \
  &&  chmod 6755 /wrf
 
 # Build OpenMPI
-RUN mkdir -p /wrf/libs/openmpi/BUILD_DIR
-RUN cd /wrf/libs/openmpi/BUILD_DIR \
+RUN mkdir -p /wrf/libs/openmpi/BUILD_DIR \
+ && cd /wrf/libs/openmpi/BUILD_DIR \
  && curl -L -O https://download.open-mpi.org/release/open-mpi/v4.0/openmpi-4.0.0.tar.gz \
  && tar -xf openmpi-4.0.0.tar.gz \
  && cd openmpi-4.0.0 \
@@ -40,6 +40,34 @@ RUN cd /wrf/libs/openmpi/BUILD_DIR \
  && echo dummy printout to keep travis happy openmpi make \
  && cd / \
  && rm -rf /wrf/libs/openmpi/BUILD_DIR
+
+# Build HDF5 libraries
+RUN mkdir -p /wrf/libs/hdf5/BUILD_DIR \
+ && cd /wrf/libs/hdf5/BUILD_DIR \
+ && wget https://www2.mmm.ucar.edu/people/duda/files/mpas/sources/hdf5-1.10.5.tar.bz2 \
+ && tar -xf hdf5-1.10.5.tar.bz2 \
+ && cd hdf5-1.10.5 \
+ && ./configure --enable-fortran --enable-cxx --enable-shared --prefix=/usr/local/ &> /wrf/libs/build_log_hdf5_config \
+ && echo dummy printout to keep travis happy hdf5 config \
+ && make install &> /wrf/libs/build_log_hdf5_make \
+ && echo dummy printout to keep travis happy hdf5 make \
+ && cd / \
+ && rm -rf /wrf/libs/hdf5/BUILD_DIR
+ENV LD_LIBRARY_PATH /usr/local/lib
+
+# OpenMPI version 4.0.5
+#RUN mkdir -p /var/tmp && \
+#    wget -q -nc --no-check-certificate -P /var/tmp https://www.open-mpi.org/software/ompi/v4.0/downloads/openmpi-4.0.5.tar.bz2 && \
+#    mkdir -p /var/tmp && tar -x -f /var/tmp/openmpi-4.0.5.tar.bz2 -C /var/tmp -j && \
+#    cd /var/tmp/openmpi-4.0.5 &&  \
+#    CC=gcc CXX=g++ F77=gfortran F90=gfortran FC=gfortran ./configure --prefix=/usr/local/openmpi --disable-getpwuid --enable-orterun-prefix-by-default --with-verbs && \
+#    make -j$(nproc) && \
+#    make -j$(nproc) install && \
+#    rm -rf /var/tmp/openmpi-4.0.5 /var/tmp/openmpi-4.0.5.tar.bz2
+#ENV LD_LIBRARY_PATH=/usr/local/openmpi/lib:$LD_LIBRARY_PATH \
+#    PATH=/usr/local/openmpi/bin:$PATH
+
+
 
 # Set up base OS environment
 
@@ -63,20 +91,7 @@ RUN cd /wrf/libs/openmpi/BUILD_DIR \
 # && scl enable devtoolset-10 tcsh 
 
 
-# Build HDF5 libraries
-#RUN mkdir -p /wrf/libs/hdf5/BUILD_DIR
-#RUN source /opt/rh/devtoolset-10/enable \
-# && cd /wrf/libs/hdf5/BUILD_DIR \
-# && wget https://www2.mmm.ucar.edu/people/duda/files/mpas/sources/hdf5-1.10.5.tar.bz2 \
-# && tar -xf hdf5-1.10.5.tar.bz2 \
-# && cd hdf5-1.10.5 \
-# && ./configure --enable-fortran --enable-cxx --enable-shared --prefix=/usr/local/ &> /wrf/libs/build_log_hdf5_config \
-# && echo dummy printout to keep travis happy hdf5 config \
-# && make install &> /wrf/libs/build_log_hdf5_make \
-# && echo dummy printout to keep travis happy hdf5 make \
-# && cd / \
-# && rm -rf /wrf/libs/hdf5/BUILD_DIR
-#ENV LD_LIBRARY_PATH /usr/local/lib
+
 
 # Build netCDF C libraries
 #RUN yum -y install libcurl-devel zlib-devel
