@@ -7,13 +7,13 @@ ENV MPI_VERSION 4.0.0
 ENV J 4
 
 # Set up base OS environment
-RUN dnf -y update \
+RUN dnf -y update && dnf -y install epel-release \
     && dnf install -y --setopt=tsflags=nodocs --enablerepo=powertools,epel \
         gcc gcc-gfortran gcc-c++ \
         glibc.i686 libgcc.i686 libpng-devel jasper jasper-devel hostname \
         m4 make perl tar bash tcsh time wget which zlib zlib-devel \
         openssh-clients openssh-server net-tools fontconfig libgfortran \
-        libXext libXrender ImageMagick ImageMagick-devel epel-release git flex \
+        libXext libXrender ImageMagick ImageMagick-devel git flex \
         flex-devel byacc bzip2-devel gzip-devel libcurl-devel zlib-devel \
         php-devel php-pear \
     && dnf -y clean all --enablerepo='*' \
