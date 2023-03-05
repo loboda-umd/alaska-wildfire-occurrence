@@ -96,7 +96,7 @@ RUN mkdir -p  /wrf/WPS_GEOG /wrf/wrfinput /wrf/wrfoutput \
 
 # Some additional configurations
 RUN mkdir /wrf/.ssh ; echo "StrictHostKeyChecking no" > /wrf/.ssh/config
-COPY default-mca-params.conf /wrf/.openmpi/mca-params.conf
+COPY ./requirements/default-mca-params.conf /wrf/.openmpi/mca-params.conf
 RUN mkdir -p /wrf/.openmpi
 RUN chown -R wrfuser:wrf /wrf/
 
