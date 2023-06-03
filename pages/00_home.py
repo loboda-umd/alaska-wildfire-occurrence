@@ -12,7 +12,7 @@ def Page():
 
     ## Demo
 
-    ![](https://imgur.com/a/dc6IwTk)
+    ![](https://imgur.com/9MfFhs6)
 
     """
 
