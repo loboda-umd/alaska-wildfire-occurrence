@@ -4,7 +4,7 @@ LABEL maintainer="jordan.a.caraballo-vega@nasa.gov"
 ENV TFC_VERSION=0.1.1
 ENV VHR_CNN_CHM_VERSION=main
 
-RUN pip install wrf-python xwrf netCDF4
+RUN pip install wrf-python xwrf netCDF4 metpy
 
 HEALTHCHECK NONE
 ENTRYPOINT [""]
