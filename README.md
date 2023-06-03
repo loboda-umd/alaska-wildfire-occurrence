@@ -13,6 +13,8 @@ app_port: 7860
 
 Wildfire occurrence modeling using Terrestrial Ecosystem Models and Artificial Intelligence
 
+[CG Lightning Probability Forecast](https://jordancaraballo-alaska-wildfire-occurrence.hf.space/)
+
 ## Objectives
 
 - Probabilistic wildfire occurrence model

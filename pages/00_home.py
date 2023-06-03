@@ -1,5 +1,6 @@
 import solara
 
+
 @solara.component
 def Page():
 
@@ -8,6 +9,10 @@ def Page():
 
     Cloud to ground lightning 10-day lightning forecast for the Alaskan tundra.
     This is still work in progress and under development.
+
+    ## Demo
+
+    ![](https://imgur.com/a/dc6IwTk)
 
     """
 
