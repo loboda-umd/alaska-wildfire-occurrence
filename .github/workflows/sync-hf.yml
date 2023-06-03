@@ -16,5 +16,5 @@ jobs:
           lfs: true
       - name: Push to hub
         env:
-          HF_TOKEN: ${{ secrets.HF_DEPLOY_TOKEN }}
+          HF_DEPLOY_TOKEN: ${{ secrets.HF_DEPLOY_TOKEN }}
         run: git push --force https://jordancaraballo:$HF_DEPLOY_TOKEN@huggingface.co/spaces/jordancaraballo/alaska-wildfire-occurrence main
