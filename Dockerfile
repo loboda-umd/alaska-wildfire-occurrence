@@ -16,6 +16,6 @@ USER root
 RUN chown -R ${NB_UID} ${HOME}
 USER ${NB_USER}
 
-EXPOSE 8765
+EXPOSE 7860
 
 CMD ["solara", "run", "./pages", "--host=0.0.0.0"]
