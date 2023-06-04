@@ -3,3 +3,7 @@ leafmap
 mapwidget
 solara
 geopandas
+datasets
+rioxarray
+streamlit
+cartopy

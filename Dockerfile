@@ -18,4 +18,7 @@ USER ${NB_USER}
 
 EXPOSE 7860
 
-CMD ["solara", "run", "./pages", "--host=0.0.0.0", "--port=7860"]
+CMD ["streamlit", "run", "./pages/Home.py", "--server.port=7860"]
+
+
+streamlit run pages/Home.py
