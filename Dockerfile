@@ -1,4 +1,4 @@
-FROM jupyter/base-notebook:latest
+FROM python:3.11-slim-bullseye
 ENV DEBIAN_FRONTEND=noninteractive
 RUN rm -rf /etc/apt/sources.list.d/*.list && \
     apt-get update && apt-get install -y git gcc build-essential libgeos-dev
