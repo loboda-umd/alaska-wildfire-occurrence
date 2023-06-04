@@ -1,6 +1,6 @@
 FROM jupyter/base-notebook:latest
-
-RUN apt update && apt install -y git gcc build-essential libgeos-dev
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get -y update && apt-get install -y git gcc build-essential libgeos-dev
 
 #RUN mamba install -c conda-forge leafmap geopandas localtileserver -y && \
 #    fix-permissions "${CONDA_DIR}" && \
