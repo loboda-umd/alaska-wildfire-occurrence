@@ -13,7 +13,7 @@ RUN python3 -m pip install --upgrade pip setuptools wheel
 #    fix-permissions "/home/${NB_USER}"
 
 COPY requirements.txt .
-RUN python3 -m pip install --upgrade pip setuptools wheel cython numpy pyshp six
+RUN python3 -m pip install --upgrade pip setuptools wheel cython numpy pyshp six pyproj
 RUN python3 -m pip install --upgrade --no-binary :all: shapely
 RUN python3 -m pip install git+https://github.com/SciTools/cartopy.git --upgrade --no-binary :all: cartopy
 
