@@ -1,1 +1,7 @@
-cartopy
+geemap>=0.21.0
+leafmap
+mapwidget
+geopandas
+datasets
+rioxarray
+streamlit
