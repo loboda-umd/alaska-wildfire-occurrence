@@ -1,6 +1,7 @@
 FROM python:3.11-slim-bullseye
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV HF_HUB_DISABLE_PROGRESS_BARS=1
 
 RUN rm -rf /etc/apt/sources.list.d/*.list && \
     apt-get update && apt-get install -y git gcc build-essential python3-dev libgeos-dev

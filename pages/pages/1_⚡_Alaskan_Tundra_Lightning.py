@@ -14,17 +14,22 @@ import pandas as pd
 from glob import glob
 from pathlib import Path
 from datetime import datetime
-from huggingface_hub import snapshot_download
+from huggingface_hub import snapshot_download, hf_hub_download
 
 # define dataset url
 DATASET_URL = 'jordancaraballo/alaska-wildfire-occurrence'
 EPSG = 3338
 
 # Grab the dataset from Hugging Face
-cgl_dataset_dir = snapshot_download(repo_id=DATASET_URL, allow_patterns="*.tif", repo_type='dataset')
-cgl_filename = glob(os.path.join(cgl_dataset_dir, 'alaskan-tundra-lightning-forecast_latest.tif'))[0]
+#cgl_dataset_dir = snapshot_download(repo_id=DATASET_URL, allow_patterns="*.tif", repo_type='dataset')
+#cgl_filename = glob(os.path.join(cgl_dataset_dir, 'alaskan-tundra-lightning-forecast_latest.tif'))[0]
 
-print(cgl_dataset_dir)
+cgl_filename = hf_hub_download(
+    repo_id=DATASET_URL, 
+    filename='alaskan-tundra-lightning-forecast_latest.tif', 
+    repo_type="dataset")
+
+#print(cgl_dataset_dir)
 
 # Open the filename from the forecast
 cgl_ds = rxr.open_rasterio(cgl_filename)
