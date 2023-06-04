@@ -15,14 +15,21 @@ COPY requirements.txt .
 RUN python3 -m pip install --upgrade pip setuptools wheel
 RUN python3 -m pip install --no-cache-dir --compile -r requirements.txt
 
-RUN mkdir ./pages
-COPY /pages ./pages
-
 ENV PROJ_LIB='/opt/conda/share/proj'
 
 #USER root
 #RUN chown -R ${NB_UID} ${HOME}
 #USER ${NB_USER}
+
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+	PATH=/home/user/.local/bin:$PATH
+
+WORKDIR $HOME
+
+RUN mkdir ./pages
+COPY --chown=user /pages ./pages
 
 EXPOSE 7860
 
