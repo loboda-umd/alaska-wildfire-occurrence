@@ -12,6 +12,7 @@ center = solara.reactive((20, 0))
 
 class PauseAnimation:
     def __init__(self):
+
         self.fig = Figure()
         ax = self.fig.subplots()
         ax.set_title('Click to pause/resume the animation')
@@ -51,4 +52,4 @@ def Page():
     #ax = fig.subplots()
     #ax.plot([1, 2, 3], [1, 4, 9])
     pa = PauseAnimation()
-    return solara.FigureMatplotlib(pa.get_fig())
+    return solara.FigureMatplotlib(pa)
