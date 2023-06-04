@@ -20,9 +20,9 @@ COPY /pages ./pages
 
 ENV PROJ_LIB='/opt/conda/share/proj'
 
-USER root
-RUN chown -R ${NB_UID} ${HOME}
-USER ${NB_USER}
+#USER root
+#RUN chown -R ${NB_UID} ${HOME}
+#USER ${NB_USER}
 
 EXPOSE 7860
 
