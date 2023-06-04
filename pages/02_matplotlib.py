@@ -1,5 +1,5 @@
 import reacton
-import solara as sol
+import solara
 from matplotlib.figure import Figure
 
 zoom = solara.reactive(2)
