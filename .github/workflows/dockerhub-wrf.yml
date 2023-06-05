@@ -2,6 +2,8 @@ name: CI to Docker Hub Baselibs
 
 on:
   push:
+    paths:
+    - 'requirements/**'
   schedule:
     - cron: '30 5 * * 1,3'
 
