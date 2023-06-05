@@ -215,7 +215,7 @@ if __name__ == "__main__":
         end_date = (start_date + datetime.timedelta(days=10))
 
         downloader = NCEP_FNL(
-            output_dir='/explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/NCEP_FNL',
+            output_dir='output/NCEP_FNL',
             start_date=start_date.strftime('%Y-%m-%d'),
             end_date=end_date.strftime('%Y-%m-%d')
         )
