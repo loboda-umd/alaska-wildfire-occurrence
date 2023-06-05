@@ -1,44 +1,36 @@
-import ipyleaflet
-import solara
-import ipywidgets as widgets
+import streamlit as st
 
-zoom = solara.reactive(2)
-center = solara.reactive((20, 0))
+st.set_page_config(
+    page_title="streamlit-folium documentation: Draw Support",
+    page_icon=":pencil:",
+    layout="wide",
+)
 
+"""
+# streamlit-folium: Draw Support
 
-class Map(ipyleaflet.Map):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.layout.height = '600px'
-        # Add what you want below
+Folium supports some of the [most popular leaflet plugins](https://python-visualization.github.io/folium/plugins.html). In this example,
+we can add the [`Draw`](https://python-visualization.github.io/folium/plugins.html#folium.plugins.Draw) plugin to our map, which allows for drawing geometric shapes on the map.
 
-        label = widgets.Label('Clicked location')
-        output = widgets.Output()
-        widget = widgets.VBox([label, output])
-        control = ipyleaflet.WidgetControl(widget=widget, position='bottomright')
-        self.add_control(control)
-        
-        def handle_interaction(**kwargs):
-            latlon = kwargs.get("coordinates")
-            if kwargs.get("type") == "click":
-                with output:
-                    output.clear_output()
-                    print(latlon)
+When a shape is drawn on the map, the coordinates that represent that shape are passed back as a geojson feature via
+the `all_drawings` and `last_active_drawing` data fields.
 
-        self.on_interaction(handle_interaction)
+Draw something below to see the return value back to Streamlit!
+"""
 
+with st.echo(code_location="below"):
+    import folium
+    import streamlit as st
+    from folium.plugins import Draw
 
-@solara.component
-def Page():
-    with solara.Column(style={"min-width": "500px"}):
-        solara.SliderInt(label="Zoom level", value=zoom, min=1, max=20)
-        Map.element(
-            zoom=zoom.value,
-            on_zoom=zoom.set,
-            center=center.value,
-            on_center=center.set,
-            scroll_wheel_zoom=True,
+    from streamlit_folium import st_folium
 
-        )
-        solara.Text(f"Zoom: {zoom.value}")
-        solara.Text(f"Center: {center.value}")
+    m = folium.Map(location=[39.949610, -75.150282], zoom_start=5)
+    Draw(export=True).add_to(m)
+
+    c1, c2 = st.columns(2)
+    with c1:
+        output = st_folium(m, width=700, height=500)
+
+    with c2:
+        st.write(output)
