@@ -1,7 +1,10 @@
 import os
 import shutil
+import filecmp
 import logging
 import datetime
+from glob import glob
+from pathlib import Path
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from wildfire_occurrence.model.config import Config
@@ -15,7 +18,7 @@ class WRFPipeline(object):
                 self,
                 config_filename: str,
                 start_date: str,
-                forecast_lenght: str
+                forecast_lenght: str,
             ):
 
         # Configuration file intialization
@@ -36,7 +39,7 @@ class WRFPipeline(object):
         self.simulation_dir = os.path.join(
             self.conf.working_dir,
             f'{self.start_date.strftime("%Y-%m-%d")}_' +
-            f'{self.start_date.strftime("%Y-%m-%d")}'
+            f'{self.end_date.strftime("%Y-%m-%d")}'
         )
         os.makedirs(self.simulation_dir, exist_ok=True)
         logging.info(f'Created output directory {self.simulation_dir}')
@@ -49,9 +52,18 @@ class WRFPipeline(object):
         self.conf_dir = os.path.join(self.simulation_dir, 'configs')
         os.makedirs(self.conf_dir, exist_ok=True)
 
+        # Setup wps directory
+        self.local_wps_path = os.path.join(self.simulation_dir, 'WPS')
+        self.local_wrf_path = os.path.join(self.simulation_dir, 'em_real')
+
         # Setup configuration filenames
         self.wps_conf_filename = os.path.join(self.conf_dir, 'namelist.wps')
         self.wrf_conf_filename = os.path.join(self.conf_dir, 'namelist.input')
+
+        # Setup configuration filenames local to directories
+        self.local_wps_conf = os.path.join(self.local_wps_path, 'namelist.wps')
+        self.local_wrf_conf = os.path.join(
+            self.local_wrf_path, 'namelist.input')
 
     # -------------------------------------------------------------------------
     # setup
@@ -76,10 +88,11 @@ class WRFPipeline(object):
         )
         data_downloader.download()
 
-        # Generate configuration files for WRF - namelist.wps
+        # Generate configuration files for WPS - namelist.wps
         self.setup_wps_config()
 
         # Generate configuration files for WRF - namelist.input
+        self.setup_wrf_config()
 
         return
 
@@ -91,34 +104,201 @@ class WRFPipeline(object):
         logging.info('Preparing to run geogrid.exe')
 
         # setup WPS directory
-        local_wps_path = os.path.join(self.simulation_dir, 'WPS')
-        if not os.path.exists(local_wps_path):
+        if not os.path.exists(self.local_wps_path):
             shutil.copytree(
-                self.conf.wps_path, local_wps_path, dirs_exist_ok=True)
-            logging.info(f'Done copying WPS to {local_wps_path}')
+                self.conf.wps_path, self.local_wps_path, dirs_exist_ok=True)
+            logging.info(f'Done copying WPS to {self.local_wps_path}')
 
         # create configuration file symlink
-        local_wps_conf = os.path.join(local_wps_path, 'namelist.wps')
-        if not os.path.lexists(local_wps_conf):
-            os.symlink(
-                self.wps_conf_filename,
-                local_wps_conf
-            )
-        logging.info(f'Created namelist.wps symlink on {local_wps_path}')
+        self._symlink_conf_file(self.wps_conf_filename, self.local_wps_conf)
 
         # go to WPS directory and run wps
-        os.chdir(local_wps_path)
-        logging.info(f'Changed working directory to {local_wps_path}')
+        os.chdir(self.local_wps_path)
+        logging.info(f'Changed working directory to {self.local_wps_path}')
 
         # setup geogrid command
-        geodrid_cmd = \
-            'singularity exec -B /explore/nobackup/projects/ilab,' + \
-            '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
-            f'{self.conf.container_path} ' + \
-            'mpirun -np 40 --oversubscribe ./geogrid.exe'
+        if not self.conf.multi_node:
+            geodrid_cmd = \
+                'singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} ' + \
+                'mpirun -np 40 --oversubscribe ./geogrid.exe'
+        else:
+            geodrid_cmd = \
+                'srun --mpi=pmix -N 2 -n 80 singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} ' + \
+                './geogrid.exe'
 
         # run geogrid command
         os.system(geodrid_cmd)
+
+        return
+
+    # -------------------------------------------------------------------------
+    # ungrib
+    # -------------------------------------------------------------------------
+    def ungrib(self) -> None:
+
+        logging.info('Preparing to run geogrid.exe')
+
+        # assert WPS directory
+        assert os.path.exists(self.local_wps_path), \
+            f'{self.local_wps_path} does not exist, please run geogrid first.'
+
+        # create Vtable symlink
+        local_wps_vtable = os.path.join(self.local_wps_path, 'Vtable')
+        if not os.path.lexists(local_wps_vtable):
+            os.symlink(
+                os.path.join(
+                    self.local_wps_path, 'ungrib/Variable_Tables/Vtable.GFS'),
+                local_wps_vtable
+            )
+        logging.info(f'Created Vtable symlink on {self.local_wps_path}')
+
+        # go to WPS directory and run wps
+        os.chdir(self.local_wps_path)
+        logging.info(f'Changed working directory to {self.local_wps_path}')
+
+        # run link_grib
+        os.system(
+            f'./link_grib.csh {self.data_dir}/{str(self.start_date.year)}/' +
+            f'fnl_{str(self.start_date.year)}')
+        logging.info('Done with link_grib.csh')
+
+        # setup ungrib command
+        if not self.conf.multi_node:
+            ungrib_cmd = \
+                'singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} mpirun ./ungrib.exe'
+        else:
+            ungrib_cmd = \
+                'srun --mpi=pmix -N 1 -n 1 singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} ' + \
+                './ungrib.exe'
+
+        # run ungrib command
+        os.system(ungrib_cmd)
+
+        return
+
+    # -------------------------------------------------------------------------
+    # metgrid
+    # -------------------------------------------------------------------------
+    def metgrid(self) -> None:
+
+        logging.info('Preparing to run metgrid.exe')
+
+        # assert WPS directory
+        assert os.path.exists(self.local_wps_path), \
+            f'{self.local_wps_path} does not exist, please run geogrid first.'
+
+        # go to WPS directory and run wps
+        os.chdir(self.local_wps_path)
+        logging.info(f'Changed working directory to {self.local_wps_path}')
+
+        # setup metgrid command
+        if not self.conf.multi_node:
+            metgrid_cmd = \
+                'singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} ' + \
+                'mpirun -np 40 --oversubscribe ./metgrid.exe'
+        else:
+            metgrid_cmd = \
+                'srun --mpi=pmix -N 1 -n 40 singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} ' + \
+                './metgrid.exe'
+
+        # run metgrid command
+        os.system(metgrid_cmd)
+
+        return
+
+    # -------------------------------------------------------------------------
+    # real
+    # -------------------------------------------------------------------------
+    def real(self) -> None:
+
+        logging.info('Preparing to run em_real.exe')
+
+        # setup WRF em_real directory
+        if not os.path.exists(self.local_wrf_path):
+            shutil.copytree(
+                os.path.join(self.conf.wrf_path, 'test', 'em_real'),
+                self.local_wrf_path, dirs_exist_ok=True)
+            logging.info(f'Done copying WRF em_real to {self.local_wrf_path}')
+
+        # move the created met_em* files to the em_real directory
+        for met_filename in glob(os.path.join(self.local_wps_path, 'met_em*')):
+            local_met_filename = os.path.join(
+                    self.local_wrf_path, f'{Path(met_filename).stem}.nc')
+            if not os.path.exists(local_met_filename):
+                os.symlink(met_filename, local_met_filename)
+
+        # create configuration file symlink
+        self._symlink_conf_file(self.wrf_conf_filename, self.local_wrf_conf)
+
+        # go to WRF directory and run real
+        os.chdir(self.local_wrf_path)
+        logging.info(f'Changed working directory to {self.local_wrf_path}')
+
+        # setup real command
+        if not self.conf.multi_node:
+            real_cmd = \
+                'singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} ' + \
+                'mpirun -np 40 --oversubscribe ./real.exe'
+        else:
+            real_cmd = \
+                'srun --mpi=pmix -N 2 -n 80 singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} ' + \
+                './real.exe'
+
+        # run metgrid command
+        os.system(real_cmd)
+
+        return
+
+    # -------------------------------------------------------------------------
+    # wrf
+    # -------------------------------------------------------------------------
+    def wrf(self) -> None:
+
+        logging.info('Preparing to run wrf.exe')
+
+        # assert WPS directory
+        assert os.path.exists(self.local_wrf_path), \
+            f'{self.local_wrf_path} does not exist, please run real first.'
+
+        # go to WPS directory and run wps
+        os.chdir(self.local_wrf_path)
+        logging.info(f'Changed working directory to {self.local_wrf_path}')
+
+        # setup metgrid command
+        if not self.conf.multi_node:
+            wrf_cmd = \
+                'singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} ' + \
+                'mpirun -np 40 --oversubscribe ./wrf.exe'
+        else:
+            wrf_cmd = \
+                'srun --mpi=pmix -N 2 -n 80 singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} ' + \
+                './wrf.exe'
+
+        # run metgrid command
+        os.system(wrf_cmd)
+
+        # TODO
+        # move output files at the end to something like working_dir/results
 
         return
 
@@ -151,7 +331,63 @@ class WRFPipeline(object):
     # -------------------------------------------------------------------------
     # setup_wrf_config
     # -------------------------------------------------------------------------
-    def setup_wrf_config(self):
-        environment = Environment(loader=FileSystemLoader("templates/"))
-        template = environment.get_template("message.txt")
+    def setup_wrf_config(
+                self, template_filename: str = 'namelist.input.jinja2'):
+
+        # Setup jinja2 Environment
+        env = Environment(
+            loader=PackageLoader("wildfire_occurrence"),
+            autoescape=select_autoescape()
+        )
+
+        # Get the template of the environment for WPS
+        template = env.get_template(template_filename)
+
+        # Modify configuration to include start and end date
+        self.conf.wrf_config['start_year'] = self.start_date.year
+        self.conf.wrf_config['end_year'] = self.end_date.year
+        self.conf.wrf_config['start_month'] = self.start_date.strftime('%m')
+        self.conf.wrf_config['end_month'] = self.end_date.strftime('%m')
+        self.conf.wrf_config['start_day'] = self.start_date.strftime('%d')
+        self.conf.wrf_config['end_day'] = self.end_date.strftime('%d')
+        self.conf.wrf_config['start_hour'] = self.start_date.strftime('%H')
+        self.conf.wrf_config['end_hour'] = self.end_date.strftime('%H')
+
+        # Fill in elements from the WRF environment and save filename
+        template.stream(self.conf.wrf_config).dump(self.wrf_conf_filename)
+        logging.info(f'Saved WRF configuration at {self.wrf_conf_filename}')
+
         return
+
+    def _symlink_conf_file(self, source, destination):
+
+        # condition 1: local configuration file does not exist, symlink it
+        if not os.path.lexists(destination):
+
+            # make sure configuration file exists
+            assert os.path.isfile(source), \
+                'Please run setup pipeline step before running real'
+
+            # add symlink
+            os.symlink(source, destination)
+
+            logging.info(f'Created namelist.input symlink at {destination}')
+
+        # condition #2: local configuration exists, but is not the latest one
+        elif not filecmp.cmp(source, destination):
+
+            # remove previous version
+            os.remove(destination)
+
+            # add symlink
+            os.symlink(source, destination)
+
+            logging.info(
+                f'Removed old copy of {destination}. Created new '
+                f'namelist.input symlink at {destination}')
+
+        else:
+
+            logging.info(
+                f'namelist.input exists, {destination}, '
+                'nothing to copy.')

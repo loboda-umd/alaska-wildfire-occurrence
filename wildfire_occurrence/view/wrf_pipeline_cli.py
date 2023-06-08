@@ -51,11 +51,11 @@ def main():
                         dest='pipeline_step',
                         help='Pipeline step to perform',
                         default=[
-                            'setup', 'geogrid',
-                            'ubgrib', 'real', 'wrf', 'all'],
+                            'setup', 'geogrid', 'ungrib', 'metgrid',
+                            'real', 'wrf', 'all'],
                         choices=[
-                            'setup', 'geogrid',
-                            'ubgrib', 'real', 'wrf', 'all'])
+                            'setup', 'geogrid', 'ungrib', 'metgrid',
+                            'real', 'wrf', 'all'])
 
     args = parser.parse_args()
 
@@ -82,6 +82,14 @@ def main():
         pipeline.setup()
     if "geogrid" in args.pipeline_step or "all" in args.pipeline_step:
         pipeline.geogrid()
+    if "ungrib" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.ungrib()
+    if "metgrid" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.metgrid()
+    if "real" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.real()
+    if "wrf" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.wrf()
 
     logging.info(f'Took {(time.time()-timer)/60.0:.2f} min.')
 

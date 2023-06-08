@@ -43,12 +43,16 @@ class NCEP_FNL(object):
         # define hour intervals
         self.hour_intervals = hour_intervals
 
+        # TODO: IF WE ARE DOWNLOADING INTO THE FUTURE
+        # THEN WE NEED TO SPECIFY THIS IS FROM THE OTHER
+        # DATASET AND NOT FROM THE CURRENT GFS
+
         # make sure we do not download data into the future
-        if self.end_date > datetime.datetime.now():
-            self.end_date = datetime.datetime.now()
-            self.hour_intervals = [
-                d for d in self.hour_intervals
-                if int(d) <= self.end_date.hour - 6]
+        # if self.end_date > datetime.datetime.now():
+        #    self.end_date = datetime.datetime.now()
+        #    self.hour_intervals = [
+        #        d for d in self.hour_intervals
+        #        if int(d) <= self.end_date.hour - 6]
         logging.info(
             f'Downloading data from {self.start_date} to {self.end_date}')
 
