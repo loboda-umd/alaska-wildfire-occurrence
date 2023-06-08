@@ -51,11 +51,11 @@ def main():
                         dest='pipeline_step',
                         help='Pipeline step to perform',
                         default=[
-                            'download', 'geogrid',
-                            'ubgrib', 'real', 'wrf', 'all'],
+                            'setup', 'geogrid', 'ungrib', 'metgrid',
+                            'real', 'wrf', 'all'],
                         choices=[
-                            'download', 'geogrid',
-                            'ubgrib', 'real', 'wrf', 'all'])
+                            'setup', 'geogrid', 'ungrib', 'metgrid',
+                            'real', 'wrf', 'all'])
 
     args = parser.parse_args()
 
@@ -77,9 +77,19 @@ def main():
     pipeline = WRFPipeline(
         args.config_file, args.start_date, args.forecast_lenght)
 
-    # Regression CHM pipeline steps
-    if "download" in args.pipeline_step or "all" in args.pipeline_step:
-        pipeline.download()
+    # WRF pipeline steps
+    if "setup" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.setup()
+    if "geogrid" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.geogrid()
+    if "ungrib" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.ungrib()
+    if "metgrid" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.metgrid()
+    if "real" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.real()
+    if "wrf" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.wrf()
 
     logging.info(f'Took {(time.time()-timer)/60.0:.2f} min.')
 

@@ -43,12 +43,16 @@ class NCEP_FNL(object):
         # define hour intervals
         self.hour_intervals = hour_intervals
 
+        # TODO: IF WE ARE DOWNLOADING INTO THE FUTURE
+        # THEN WE NEED TO SPECIFY THIS IS FROM THE OTHER
+        # DATASET AND NOT FROM THE CURRENT GFS
+
         # make sure we do not download data into the future
-        if self.end_date > datetime.datetime.now():
-            self.end_date = datetime.datetime.now()
-            self.hour_intervals = [
-                d for d in self.hour_intervals
-                if int(d) <= self.end_date.hour - 6]
+        # if self.end_date > datetime.datetime.now():
+        #    self.end_date = datetime.datetime.now()
+        #    self.hour_intervals = [
+        #        d for d in self.hour_intervals
+        #        if int(d) <= self.end_date.hour - 6]
         logging.info(
             f'Downloading data from {self.start_date} to {self.end_date}')
 
@@ -186,26 +190,6 @@ if __name__ == "__main__":
     dates = [
         '2003-06-23',
         '2005-06-11',
-        '2005-06-29',
-        '2005-08-16',
-        '2007-07-04',
-        '2007-07-11',
-        '2008-06-25',
-        '2009-06-09',
-        '2010-07-01',
-        '2013-06-20',
-        '2013-08-16',
-        '2015-07-14',
-        '2015-06-21',
-        '2015-07-23',
-        '2016-07-11',
-        '2022-01-10',
-        '2022-07-03',
-        '2018-02-25',
-        '2019-08-04',
-        '2019-08-19',
-        '2020-09-03',
-        '2022-05-09',
         '2023-06-04'
     ]
 
@@ -215,7 +199,7 @@ if __name__ == "__main__":
         end_date = (start_date + datetime.timedelta(days=10))
 
         downloader = NCEP_FNL(
-            output_dir='/explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/NCEP_FNL',
+            output_dir='output/NCEP_FNL',
             start_date=start_date.strftime('%Y-%m-%d'),
             end_date=end_date.strftime('%Y-%m-%d')
         )
