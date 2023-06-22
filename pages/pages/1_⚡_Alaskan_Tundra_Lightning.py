@@ -1,74 +1,36 @@
-import os
-import re
-import datasets
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 import streamlit as st
-import streamlit.components.v1 as components
-from matplotlib.animation import FuncAnimation
-import cartopy.crs as ccrs
-import rioxarray as rxr
-import xarray as xr
-import pandas as pd
-from glob import glob
-from pathlib import Path
-from datetime import datetime
-from huggingface_hub import snapshot_download, hf_hub_download
 
-# define dataset url
-DATASET_URL = 'jordancaraballo/alaska-wildfire-occurrence'
-EPSG = 3338
+st.set_page_config(
+    page_title="streamlit-folium documentation: Draw Support",
+    page_icon=":pencil:",
+    layout="wide",
+)
 
-# Grab the dataset from Hugging Face
-#cgl_dataset_dir = snapshot_download(repo_id=DATASET_URL, allow_patterns="*.tif", repo_type='dataset')
-#cgl_filename = glob(os.path.join(cgl_dataset_dir, 'alaskan-tundra-lightning-forecast_latest.tif'))[0]
+"""
+# streamlit-folium: Draw Support
 
-cgl_filename = hf_hub_download(
-    repo_id=DATASET_URL, 
-    filename='alaskan-tundra-lightning-forecast_latest.tif', 
-    repo_type="dataset")
+Folium supports some of the [most popular leaflet plugins](https://python-visualization.github.io/folium/plugins.html). In this example,
+we can add the [`Draw`](https://python-visualization.github.io/folium/plugins.html#folium.plugins.Draw) plugin to our map, which allows for drawing geometric shapes on the map.
 
-#print(cgl_dataset_dir)
+When a shape is drawn on the map, the coordinates that represent that shape are passed back as a geojson feature via
+the `all_drawings` and `last_active_drawing` data fields.
 
-# Open the filename from the forecast
-cgl_ds = rxr.open_rasterio(cgl_filename)
+Draw something below to see the return value back to Streamlit!
+"""
 
-# Rename bands with timestamps
-cgl_ds['band'] = cgl_ds.attrs['DATES'].replace("'", "").strip('][').split(', ')
+with st.echo(code_location="below"):
+    import folium
+    import streamlit as st
+    from folium.plugins import Draw
 
-# Generate visualization
-fig = plt.figure()
-ax = plt.axes(projection=ccrs.epsg(EPSG))
-ax.coastlines()
+    from streamlit_folium import st_folium
 
-# Generate merge with cartipy
-mesh = cgl_ds.isel(band=0).plot.pcolormesh(
-    ax=ax, transform=ccrs.epsg(EPSG), animated=True,cmap='seismic', vmin=0, vmax=1)
+    m = folium.Map(location=[39.949610, -75.150282], zoom_start=5)
+    Draw(export=True).add_to(m)
 
-# Define update function
-def update_mesh(t):
-    ax.set_title("time = %s"%t)
-    mesh.set_array(cgl_ds.sel(band=t).values.ravel())
-    return mesh,
+    c1, c2 = st.columns(2)
+    with c1:
+        output = st_folium(m, width=700, height=500)
 
-# Generate animation function
-animation = FuncAnimation(
-    fig, update_mesh, frames=cgl_ds.band.values, interval=600)
-animation_js = animation.to_jshtml()
-
-# Adding autoplay
-click_on_play = """document.querySelector('.anim-buttons button[title="Play"]').click();"""
-
-## Search for the creation of the animation within the jshtml file created by matplotlib
-pattern = re.compile(r"(setTimeout.*?;)(.*?})", re.MULTILINE | re.DOTALL)
-
-## Insert the JS line right below that
-animation_js = pattern.sub(rf"\1 \n {click_on_play} \2", animation_js)
-
-# Plot text and animation on streamlit page
-st.title("Alpha Version - Alaskan Tundra 10-day Lightning Forecast")
-st.markdown(
-    "Cloud to ground lightning 10-day lightning forecast for the Alaskan tundra. " +
-    "This is still work in progress and under development.")
-components.html(animation_js, height=1000)
+    with c2:
+        st.write(output)
