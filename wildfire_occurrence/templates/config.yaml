@@ -1,0 +1,24 @@
+# WRF Pipeline
+
+working_dir: /explore/nobackup/projects/ilab/projects/LobodaTFO/operations
+container_path: /explore/nobackup/projects/ilab/projects/LobodaTFO/software/containers/wrf-baselibs
+wps_path: /explore/nobackup/projects/ilab/projects/LobodaTFO/software/WPS_BASE
+wrf_path: /explore/nobackup/projects/ilab/projects/LobodaTFO/software/WRF_BASE
+
+# WPS Template Configurations
+wps_config:
+  geog_data_path: /explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WPS_GEOG/
+  interval_seconds: 10800
+
+wrf_config:
+  interval_seconds: 10800
+  num_metgrid_levels: 27
+
+# Directories to mount inside the container
+container_mounts:
+  - /explore/nobackup/projects/ilab'
+  - '$NOBACKUP'
+  - '/lscratch'
+  - '/panfs/ccds02/nobackup/projects/ilab'
+
+multi_node: False
