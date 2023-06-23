@@ -27,7 +27,7 @@ st.markdown(
 
     ## Objectives
 
-    TBD
+    Visualization and download of Alaska lightning data.
 
     ## Want to learn more?
     - Feel free to contact us for additional details, jacaraba@umd.edu
