@@ -468,7 +468,8 @@ if __name__ == "__main__":
         output_dir = 'output'  # os.path.dirname(os.path.abspath(filename))
 
         # TODO: make this for loop parallel later
-        for t_idx, delta_time in enumerate(wrf_analysis.wrf_dataset.Times.values):
+        for t_idx, delta_time in enumerate(
+                wrf_analysis.wrf_dataset.Times.values):
 
             logging.info(f'Processing t_idx: {t_idx}, timestamp: {delta_time}')
             output_filename = os.path.join(

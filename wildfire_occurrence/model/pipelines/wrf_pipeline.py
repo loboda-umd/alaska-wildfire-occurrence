@@ -5,9 +5,9 @@ import logging
 import datetime
 from glob import glob
 from pathlib import Path
-from itertools import repeat
+# from itertools import repeat
 from omegaconf import OmegaConf
-from multiprocessing import Pool, cpu_count
+from multiprocessing import cpu_count  # , Pool
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from wildfire_occurrence.model.config import Config
@@ -61,7 +61,8 @@ class WRFPipeline(object):
         self.local_wps_path = os.path.join(self.simulation_dir, 'WPS')
         self.local_wrf_path = os.path.join(self.simulation_dir, 'em_real')
         self.local_wrf_output = os.path.join(self.simulation_dir, 'output')
-        self.local_wrf_output_vars = os.path.join(self.simulation_dir, 'variables')
+        self.local_wrf_output_vars = os.path.join(
+            self.simulation_dir, 'variables')
 
         # Setup configuration filenames
         self.wps_conf_filename = os.path.join(self.conf_dir, 'namelist.wps')
@@ -134,11 +135,10 @@ class WRFPipeline(object):
                 f'{self.conf.container_path} ' + \
                 f'mpirun -np {cpu_count()} --oversubscribe ./geogrid.exe'
         else:
-            geodrid_cmd = 'bash /panfs/ccds02/nobackup/projects/ilab/projects/LobodaTFO/operations/2015-07-23_2015-08-02/WPS/run_geogrid.sh'
-            #'mpirun -np 40 --host gpu016 --oversubscribe singularity exec -B /explore/nobackup/projects/ilab,' + \
-            #'$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
-            #f'{self.conf.container_path} ' + \
-            #'bash /panfs/ccds02/nobackup/projects/ilab/projects/LobodaTFO/operations/2015-07-23_2015-08-02/WPS/run_geogrid.sh'
+            geodrid_cmd = 'mpirun -np 40 --host gpu016 --oversubscribe' + \
+                'singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} ./geogrid.exe'
 
         # run geogrid command
         os.system(geodrid_cmd)
@@ -186,7 +186,8 @@ class WRFPipeline(object):
                 f'{self.conf.container_path} ./ungrib.exe'
         else:
             ungrib_cmd = \
-                'srun --mpi=pmix -N 1 -n 1 singularity exec -B /explore/nobackup/projects/ilab,' + \
+                'srun --mpi=pmix -N 1 -n 1 singularity exec -B ' + \
+                '/explore/nobackup/projects/ilab,' + \
                 '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
                 './ungrib.exe'
@@ -220,7 +221,8 @@ class WRFPipeline(object):
                 f'mpirun -np {cpu_count()} --oversubscribe ./metgrid.exe'
         else:
             metgrid_cmd = \
-                f'srun --mpi=pmix -N 1 -n {cpu_count()} singularity exec -B /explore/nobackup/projects/ilab,' + \
+                f'srun --mpi=pmix -N 1 -n {cpu_count()} singularity ' + \
+                'exec -B /explore/nobackup/projects/ilab,' + \
                 '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
                 './metgrid.exe'
@@ -267,7 +269,8 @@ class WRFPipeline(object):
                 f'mpirun -np {cpu_count()} --oversubscribe ./real.exe'
         else:
             real_cmd = \
-                'srun --mpi=pmix -N 2 -n 80 singularity exec -B /explore/nobackup/projects/ilab,' + \
+                'srun --mpi=pmix -N 2 -n 80 singularity ' + \
+                'exec -B /explore/nobackup/projects/ilab,' + \
                 '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
                 './real.exe'
@@ -301,7 +304,8 @@ class WRFPipeline(object):
                 f'mpirun -np {cpu_count()} --oversubscribe ./wrf.exe'
         else:
             wrf_cmd = \
-                'srun --mpi=pmix -N 2 -n 80 singularity exec -B /explore/nobackup/projects/ilab,' + \
+                'srun --mpi=pmix -N 2 -n 80 singularity ' + \
+                'exec -B /explore/nobackup/projects/ilab,' + \
                 '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
                 './wrf.exe'
