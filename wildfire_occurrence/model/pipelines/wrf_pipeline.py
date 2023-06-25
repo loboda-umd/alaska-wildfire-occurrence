@@ -5,11 +5,15 @@ import logging
 import datetime
 from glob import glob
 from pathlib import Path
+from itertools import repeat
+from omegaconf import OmegaConf
+from multiprocessing import Pool, cpu_count
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from wildfire_occurrence.model.config import Config
 from wildfire_occurrence.model.common import read_config
 from wildfire_occurrence.model.data_download.ncep_fnl import NCEP_FNL
+from wildfire_occurrence.model.analysis.wrf_analysis import WRFAnalysis
 
 
 class WRFPipeline(object):
@@ -19,6 +23,7 @@ class WRFPipeline(object):
                 config_filename: str,
                 start_date: str,
                 forecast_lenght: str,
+                multi_node: bool = False
             ):
 
         # Configuration file intialization
@@ -42,7 +47,7 @@ class WRFPipeline(object):
             f'{self.end_date.strftime("%Y-%m-%d")}'
         )
         os.makedirs(self.simulation_dir, exist_ok=True)
-        logging.info(f'Created output directory {self.simulation_dir}')
+        logging.info(f'Created model output directory {self.simulation_dir}')
 
         # Setup data_dir
         self.data_dir = os.path.join(self.simulation_dir, 'data')
@@ -55,6 +60,8 @@ class WRFPipeline(object):
         # Setup wps directory
         self.local_wps_path = os.path.join(self.simulation_dir, 'WPS')
         self.local_wrf_path = os.path.join(self.simulation_dir, 'em_real')
+        self.local_wrf_output = os.path.join(self.simulation_dir, 'output')
+        self.local_wrf_output_vars = os.path.join(self.simulation_dir, 'variables')
 
         # Setup configuration filenames
         self.wps_conf_filename = os.path.join(self.conf_dir, 'namelist.wps')
@@ -64,6 +71,9 @@ class WRFPipeline(object):
         self.local_wps_conf = os.path.join(self.local_wps_path, 'namelist.wps')
         self.local_wrf_conf = os.path.join(
             self.local_wrf_path, 'namelist.input')
+
+        # setup multi_node variable
+        self.conf.multi_node = multi_node
 
     # -------------------------------------------------------------------------
     # setup
@@ -120,15 +130,15 @@ class WRFPipeline(object):
         if not self.conf.multi_node:
             geodrid_cmd = \
                 'singularity exec -B /explore/nobackup/projects/ilab,' + \
-                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
-                'mpirun -np 40 --oversubscribe ./geogrid.exe'
+                f'mpirun -np {cpu_count()} --oversubscribe ./geogrid.exe'
         else:
-            geodrid_cmd = \
-                'srun --mpi=pmix -N 2 -n 80 singularity exec -B /explore/nobackup/projects/ilab,' + \
-                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
-                f'{self.conf.container_path} ' + \
-                './geogrid.exe'
+            geodrid_cmd = 'bash /panfs/ccds02/nobackup/projects/ilab/projects/LobodaTFO/operations/2015-07-23_2015-08-02/WPS/run_geogrid.sh'
+            #'mpirun -np 40 --host gpu016 --oversubscribe singularity exec -B /explore/nobackup/projects/ilab,' + \
+            #'$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+            #f'{self.conf.container_path} ' + \
+            #'bash /panfs/ccds02/nobackup/projects/ilab/projects/LobodaTFO/operations/2015-07-23_2015-08-02/WPS/run_geogrid.sh'
 
         # run geogrid command
         os.system(geodrid_cmd)
@@ -160,22 +170,24 @@ class WRFPipeline(object):
         os.chdir(self.local_wps_path)
         logging.info(f'Changed working directory to {self.local_wps_path}')
 
+        # find all files in directory, and extract common prefix
+        common_prefix = os.path.commonprefix(
+            glob(f'{self.data_dir}/{str(self.start_date.year)}/*'))
+
         # run link_grib
-        os.system(
-            f'./link_grib.csh {self.data_dir}/{str(self.start_date.year)}/' +
-            f'fnl_{str(self.start_date.year)}')
+        os.system(f'./link_grib.csh {common_prefix}')
         logging.info('Done with link_grib.csh')
 
         # setup ungrib command
         if not self.conf.multi_node:
             ungrib_cmd = \
                 'singularity exec -B /explore/nobackup/projects/ilab,' + \
-                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
-                f'{self.conf.container_path} mpirun ./ungrib.exe'
+                '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'{self.conf.container_path} ./ungrib.exe'
         else:
             ungrib_cmd = \
                 'srun --mpi=pmix -N 1 -n 1 singularity exec -B /explore/nobackup/projects/ilab,' + \
-                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
                 './ungrib.exe'
 
@@ -203,13 +215,13 @@ class WRFPipeline(object):
         if not self.conf.multi_node:
             metgrid_cmd = \
                 'singularity exec -B /explore/nobackup/projects/ilab,' + \
-                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
-                'mpirun -np 40 --oversubscribe ./metgrid.exe'
+                f'mpirun -np {cpu_count()} --oversubscribe ./metgrid.exe'
         else:
             metgrid_cmd = \
-                'srun --mpi=pmix -N 1 -n 40 singularity exec -B /explore/nobackup/projects/ilab,' + \
-                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                f'srun --mpi=pmix -N 1 -n {cpu_count()} singularity exec -B /explore/nobackup/projects/ilab,' + \
+                '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
                 './metgrid.exe'
 
@@ -250,13 +262,13 @@ class WRFPipeline(object):
         if not self.conf.multi_node:
             real_cmd = \
                 'singularity exec -B /explore/nobackup/projects/ilab,' + \
-                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
-                'mpirun -np 40 --oversubscribe ./real.exe'
+                f'mpirun -np {cpu_count()} --oversubscribe ./real.exe'
         else:
             real_cmd = \
                 'srun --mpi=pmix -N 2 -n 80 singularity exec -B /explore/nobackup/projects/ilab,' + \
-                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
                 './real.exe'
 
@@ -284,13 +296,13 @@ class WRFPipeline(object):
         if not self.conf.multi_node:
             wrf_cmd = \
                 'singularity exec -B /explore/nobackup/projects/ilab,' + \
-                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
-                'mpirun -np 40 --oversubscribe ./wrf.exe'
+                f'mpirun -np {cpu_count()} --oversubscribe ./wrf.exe'
         else:
             wrf_cmd = \
                 'srun --mpi=pmix -N 2 -n 80 singularity exec -B /explore/nobackup/projects/ilab,' + \
-                '$NOBACKUP,/lscratch,/panfs/ccds02/nobackup/projects/ilab ' + \
+                '$NOBACKUP,/panfs/ccds02/nobackup/projects/ilab ' + \
                 f'{self.conf.container_path} ' + \
                 './wrf.exe'
 
@@ -300,6 +312,114 @@ class WRFPipeline(object):
         # TODO
         # move output files at the end to something like working_dir/results
 
+        return
+
+    # -------------------------------------------------------------------------
+    # postprocess
+    # -------------------------------------------------------------------------
+    def postprocess(self) -> None:
+
+        logging.info('Preparing to postprocess and extract variables')
+
+        # create output directory
+        os.makedirs(self.local_wrf_output, exist_ok=True)
+        logging.info(f'Created WRF output directory {self.local_wrf_output}')
+
+        # if the files have not been moved, move them to the output dir
+        if len(os.listdir(self.local_wrf_output)) == 0:
+
+            # get filenames, make sure they exist
+            wrf_output_filenames = \
+                glob(os.path.join(self.local_wrf_path, 'auxhist24_d0*')) + \
+                glob(os.path.join(self.local_wrf_path, 'wrfout_d0*'))
+            assert len(wrf_output_filenames) > 0, \
+                'WRF output (auxhist24_d0*, wrfout_d0*) not found. Re-run WRF.'
+
+            # move output to clean directory
+            for filename in wrf_output_filenames:
+                shutil.move(filename, self.local_wrf_output)
+            logging.info(f'Moved WRF output to {self.local_wrf_output}')
+
+        # Get WRF output filename
+        wrf_output_filename = glob(
+            os.path.join(self.local_wrf_output, self.conf.wrf_output_filename))
+        assert len(wrf_output_filename) == 1, \
+            f'WRF output filename not found under {self.local_wrf_output}.'
+
+        # Get first item from the list
+        wrf_output_filename = wrf_output_filename[0]
+        logging.info(f'Loading {wrf_output_filename}')
+
+        # create WRFAnalysis object, stores wrf_dataset
+        wrf_analysis = WRFAnalysis(wrf_output_filename)
+
+        # variables output dir
+        os.makedirs(self.local_wrf_output_vars, exist_ok=True)
+        logging.info(
+            f'Created WRF vars output directory {self.local_wrf_output_vars}')
+
+        """
+        # parallel extraction of variables
+        p = Pool(processes=cpu_count())
+        p.starmap(
+            self._compute_variables,
+            zip(
+                range(len(wrf_analysis.wrf_dataset.Times.values)),
+                wrf_analysis.wrf_dataset.Times.values,
+                repeat(wrf_output_filename)
+            )
+        )
+        """
+
+        # serial extraction of variables
+        for t_idx, delta_time in \
+                enumerate(wrf_analysis.wrf_dataset.Times.values):
+
+            logging.info(f'Processing t_idx: {t_idx}, timestamp: {delta_time}')
+
+            # setup output filename
+            output_filename = os.path.join(
+                    self.local_wrf_output_vars,
+                    f"d02_{delta_time.astype(str).replace(':', '-')}.tif")
+
+            # if the imagery does not exist
+            if not os.path.isfile(output_filename):
+
+                # compute WRF variables and output to disk
+                wrf_analysis.compute_all_and_write(
+                    timeidx=t_idx,
+                    output_variables=OmegaConf.to_object(
+                        self.conf.wrf_output_variables),
+                    output_filename=output_filename
+                )
+
+    # -------------------------------------------------------------------------
+    # _compute_variables
+    # -------------------------------------------------------------------------
+    def _compute_variables(self, t_idx, delta_time, wrf_output_filename):
+
+        logging.info(f'Processing t_idx: {t_idx}, timestamp: {delta_time}')
+
+        # setup output filename
+        output_filename = os.path.join(
+                self.local_wrf_output_vars,
+                f"d02_{delta_time.astype(str).replace(':', '-')}.tif")
+
+        # if the imagery does not exist
+        if not os.path.isfile(output_filename):
+
+            # unfortunately, netCDF object is not pickable, thus we need
+            # to redifine it on every single process, hopefully there
+            # will be an implementation on it at some point by them
+            wrf_analysis = WRFAnalysis(wrf_output_filename)
+
+            # compute WRF variables and output to disk
+            wrf_analysis.compute_all_and_write(
+                timeidx=t_idx,
+                output_variables=OmegaConf.to_object(
+                        self.conf.wrf_output_variables),
+                output_filename=output_filename
+            )
         return
 
     # -------------------------------------------------------------------------

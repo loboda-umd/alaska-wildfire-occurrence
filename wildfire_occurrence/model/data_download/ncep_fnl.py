@@ -9,7 +9,15 @@ from datetime import date
 from typing import List, Literal
 from multiprocessing import Pool, cpu_count
 
-__data_source__ = 'https://rda.ucar.edu/datasets/ds083.2'
+__past_data_source__ = 'https://rda.ucar.edu/datasets/ds083.2'
+__future_data_source__ = 'https://rda.ucar.edu/datasets/ds084.1'
+__projection_data_source__ = 'https://rda.ucar.edu/datasets/ds316-1'
+
+DATASET_URL = {
+    'prod': 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod',
+    'ds084.1': 'https://data.rda.ucar.edu/ds084.1',  # future-short
+    'ds083.2': 'https://stratus.rda.ucar.edu/ds083.2',  # past
+}
 
 
 class NCEP_FNL(object):
@@ -20,6 +28,8 @@ class NCEP_FNL(object):
                 start_date: str = date.today(),
                 end_date: str = date.today(),
                 hour_intervals: List = ['00', '06', '12', '18'],
+                dataset: str = None,
+                resolution: str = '1p00',  # 1p00, 0p50, 0p25
                 n_procs: int = cpu_count()
             ):
 
@@ -37,22 +47,37 @@ class NCEP_FNL(object):
         if isinstance(end_date, str):
             self.end_date = datetime.datetime.strptime(
                 end_date, '%Y-%m-%d').date()
+        elif isinstance(end_date, datetime.datetime):
+            self.end_date = end_date.date()
         else:
             self.end_date = end_date
 
         # define hour intervals
         self.hour_intervals = hour_intervals
 
-        # TODO: IF WE ARE DOWNLOADING INTO THE FUTURE
-        # THEN WE NEED TO SPECIFY THIS IS FROM THE OTHER
-        # DATASET AND NOT FROM THE CURRENT GFS
+        # define resolution to download
+        self.resolution = resolution
 
-        # make sure we do not download data into the future
-        # if self.end_date > datetime.datetime.now():
-        #    self.end_date = datetime.datetime.now()
-        #    self.hour_intervals = [
-        #        d for d in self.hour_intervals
-        #        if int(d) <= self.end_date.hour - 6]
+        # dataset to download, select based on past vs future
+        if dataset is not None:
+            # this means the user specified the dataset manually
+            self.dataset = dataset
+        else:
+            # automatically select future dataset
+            if self.end_date > datetime.datetime.now().date():
+
+                # specify NOAA production GFS dataset
+                self.dataset = 'prod'
+
+                # modify the hour interval to match end date
+                # 384 is the longest time interval produced by NOAA
+                self.hour_intervals = [
+                    f'{interval:03}' for interval in range(0, 385, 3)]
+
+            # automatically select past archive dataset
+            else:
+                self.dataset = 'ds083.2'
+
         logging.info(
             f'Downloading data from {self.start_date} to {self.end_date}')
 
@@ -84,17 +109,22 @@ class NCEP_FNL(object):
         }
 
         # define data url
-        self.data_url = 'https://rda.ucar.edu'
+        self.set_data_url(self.dataset)
 
+        # setup grib format
         if self.start_date.year < 2008:
             self.grib_format = 'grib1'
         else:
             self.grib_format = 'grib2'
 
-        self.dataset_path = f'/data/OS/ds083.2/{self.grib_format}'
-
         # nnumber of processors to use
         self.n_procs = n_procs
+
+    def set_data_url(self, dataset: str):
+        try:
+            self.data_url = DATASET_URL[dataset]
+        except KeyError:
+            sys.exit(f'{dataset} dataset not supported')
 
     def _authenticate(self, action: Literal["auth", "cleanup"] = "auth"):
 
@@ -167,18 +197,34 @@ class NCEP_FNL(object):
         return
 
     def _get_filenames(self):
+        # list to store filenames
         filenames_list = []
-        daterange = pd.date_range(self.start_date, self.end_date)
-        for single_date in daterange:
-            year = single_date.strftime("%Y")
+
+        # dataset path for ds083.2, past archive data
+        if self.dataset == 'ds083.2':
+            daterange = pd.date_range(self.start_date, self.end_date)
+            for single_date in daterange:
+                year = single_date.strftime("%Y")
+                for hour in self.hour_intervals:
+                    filename = os.path.join(
+                        f'/{self.grib_format}/',
+                        f'{year}/{single_date.strftime("%Y.%m")}',
+                        f'fnl_{single_date.strftime("%Y%m%d")}_' +
+                        f'{hour}_00.{self.grib_format}'
+                    )
+                    filenames_list.append(filename)
+
+        # dataset path for production
+        # https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/gfs.20230623/00/atmos/gfs.t00z.pgrb2.1p00.f000
+        elif self.dataset == 'prod':
             for hour in self.hour_intervals:
                 filename = os.path.join(
-                    self.dataset_path,
-                    f'{year}/{single_date.strftime("%Y.%m")}',
-                    f'fnl_{single_date.strftime("%Y%m%d")}_' +
-                    f'{hour}_00.{self.grib_format}'
+                    f'/gfs.{self.start_date.strftime("%Y%m%d")}',
+                    '00/atmos',
+                    f'gfs.t00z.pgrb2.{self.resolution}.f{hour}'
                 )
                 filenames_list.append(filename)
+
         return filenames_list
 
 
@@ -188,15 +234,16 @@ class NCEP_FNL(object):
 if __name__ == "__main__":
 
     dates = [
-        '2003-06-23',
-        '2005-06-11',
-        '2023-06-04'
+        #'2003-06-23',
+        #'2005-06-11',
+        #'2023-06-04'
+        '2023-06-23'
     ]
 
     for init_date in dates:
 
         start_date = datetime.datetime.strptime(init_date, "%Y-%m-%d")
-        end_date = (start_date + datetime.timedelta(days=10))
+        end_date = (start_date + datetime.timedelta(days=2))
 
         downloader = NCEP_FNL(
             output_dir='output/NCEP_FNL',

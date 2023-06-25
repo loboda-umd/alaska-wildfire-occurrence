@@ -12,13 +12,46 @@ wps_config:
 
 wrf_config:
   interval_seconds: 10800
-  num_metgrid_levels: 27
+  num_metgrid_levels: 34
 
 # Directories to mount inside the container
 container_mounts:
   - /explore/nobackup/projects/ilab'
   - '$NOBACKUP'
-  - '/lscratch'
   - '/panfs/ccds02/nobackup/projects/ilab'
 
 multi_node: False
+
+wrf_output_filename: 'wrfout_d02_*_00:00:00'
+
+wrf_output_variables:
+  - 'CFTotal'
+#  - 'CFLow'
+#  - 'CFMed'
+#  - 'CFHigh'
+#  - 'DZ700_850'
+#  - 'GPZ500'
+#  - 'GPZ700'
+#  - 'GPZ750'
+#  - 'GPZ850'
+#  - 'Helicity'
+#  - 'LCL'
+#  - 'PLI'
+#  - 'PW'
+#  - 'RAINTotal'
+#  - 'RH2'
+#  - 'RH500'
+#  - 'RH700'
+#  - 'RH800'
+#  - 'RH850'
+#  - 'SHOW'
+#  - 'SLP'
+#  - 'TD2'
+#  - 'TD500'
+#  - 'TT'
+#  - 'T2'
+#  - 'T500'
+#  - 'T750'
+#  - 'T850'
+#  - 'W500'
+#  - 'WA500'

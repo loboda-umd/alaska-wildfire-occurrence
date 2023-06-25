@@ -42,6 +42,14 @@ def main():
                         dest='forecast_lenght',
                         help='Lenght of WRF forecast')
 
+    parser.add_argument('-mn',
+                        '--multi-node',
+                        type=bool,
+                        required=False,
+                        default=False,
+                        dest='multi_node',
+                        help='Multiple nodes for WRF forecast')
+
     parser.add_argument(
                         '-s',
                         '--pipeline-step',
@@ -52,10 +60,10 @@ def main():
                         help='Pipeline step to perform',
                         default=[
                             'setup', 'geogrid', 'ungrib', 'metgrid',
-                            'real', 'wrf', 'all'],
+                            'real', 'wrf', 'postprocess', 'all'],
                         choices=[
                             'setup', 'geogrid', 'ungrib', 'metgrid',
-                            'real', 'wrf', 'all'])
+                            'real', 'wrf', 'postprocess', 'all'])
 
     args = parser.parse_args()
 
@@ -75,7 +83,9 @@ def main():
 
     # Initialize pipeline object
     pipeline = WRFPipeline(
-        args.config_file, args.start_date, args.forecast_lenght)
+        args.config_file, args.start_date,
+        args.forecast_lenght, args.multi_node
+    )
 
     # WRF pipeline steps
     if "setup" in args.pipeline_step or "all" in args.pipeline_step:
@@ -90,6 +100,8 @@ def main():
         pipeline.real()
     if "wrf" in args.pipeline_step or "all" in args.pipeline_step:
         pipeline.wrf()
+    if "postprocess" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.postprocess()
 
     logging.info(f'Took {(time.time()-timer)/60.0:.2f} min.')
 

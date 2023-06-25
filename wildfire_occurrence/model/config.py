@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from dataclasses import dataclass, field
 
 
@@ -34,3 +34,25 @@ class Config:
     wrf_config: Optional[dict] = field(
         default_factory=lambda: {
             'interval_seconds': 10800, 'num_metgrid_levels': 27})
+
+    # Output filename from WRF to extract variables from
+    wrf_output_filename: Optional[str] = 'wrfout_d02_*_00:00:00'
+
+    # List for posprocessing of variables
+    wrf_output_variables: Optional[List[str]] = field(
+        default_factory=lambda: [
+            'CFTotal', 'CFLow', 'CFMed', 'CFHigh',
+            'DZ700_850',
+            'GPZ500', 'GPZ700', 'GPZ750', 'GPZ850',
+            'Helicity',
+            'LCL',
+            'PLI', 'PW',
+            'RAINTotal',
+            'RH2', 'RH500', 'RH700', 'RH800', 'RH850',
+            'SHOW',
+            'SLP',
+            'TD2', 'TD500',
+            'TT', 'T2', 'T500', 'T750', 'T850',
+            'W500', 'WA500'
+        ]
+    )
