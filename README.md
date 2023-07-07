@@ -13,6 +13,8 @@ app_port: 7860
 
 Wildfire occurrence modeling using Terrestrial Ecosystem Models and Artificial Intelligence
 
+[![DOI](https://zenodo.org/badge/545456432.svg)](https://zenodo.org/badge/latestdoi/545456432)
+
 [CG Lightning Probability Forecast](https://huggingface.co/spaces/jordancaraballo/alaska-wildfire-occurrence)
 
 ## Objectives
