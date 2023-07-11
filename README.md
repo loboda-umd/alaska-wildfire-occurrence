@@ -17,6 +17,13 @@ Wildfire occurrence modeling using Terrestrial Ecosystem Models and Artificial I
 
 [CG Lightning Probability Forecast](https://huggingface.co/spaces/jordancaraballo/alaska-wildfire-occurrence)
 
+## Exercises
+
+| Lecture Topic | Interactive Link | 
+|---|---|
+| **Python Spatial Visualization** | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nasa-nccs-hpda/wildfire-occurrence/blob/main/notebooks/intern/LightningVisualization.ipynb) |
+
+
 ## Objectives
 
 - Probabilistic wildfire occurrence model
