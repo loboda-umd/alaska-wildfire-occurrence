@@ -13,7 +13,15 @@ app_port: 7860
 
 Wildfire occurrence modeling using Terrestrial Ecosystem Models and Artificial Intelligence
 
+[![DOI](https://zenodo.org/badge/545456432.svg)](https://zenodo.org/badge/latestdoi/545456432)
+
 [CG Lightning Probability Forecast](https://huggingface.co/spaces/jordancaraballo/alaska-wildfire-occurrence)
+
+## Exercises
+
+| Lecture Topic | Interactive Link | 
+|---|---|
+| **Python Spatial Visualization** | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nasa-nccs-hpda/wildfire-occurrence/blob/main/notebooks/intern/LightningVisualization.ipynb) |
 
 ## Objectives
 
@@ -37,7 +45,7 @@ singularity build --sandbox /lscratch/$USER/container/wildfire-occurrence docker
 ### Executing WRF
 
 ```bash
-singularity exec --env PYTHONPATH="/explore/nobackup/people/$USER/development/wildfire-occurrence" --nv -B /explore/nobackup/projects/ilab,$NOBACKUP,/lscratch,/explore/nobackup/people /lscratch/$USER/container/wildfire-occurrence python /explore/nobackup/people/$USER/development/wildfire-occurrence/wildfire_occurrence/view/wrf_pipeline_cli.py -c /explore/nobackup/people/$USER/development/wildfire-occurrence/wildfire_occurrence/templates/config.yaml --pipeline-step all --start-date 2023-06-05 --forecast-lenght 10
+conda activate ilab-pytorch; PYTHONPATH="/explore/nobackup/people/$USER/development/wildfire-occurrence" python /explore/nobackup/people/$USER/development/wildfire-occurrence/wildfire_occurrence/view/wrf_pipeline_cli.py -c /explore/nobackup/people/$USER/development/wildfire-occurrence/wildfire_occurrence/templates/config.yaml --start-date 2023-06-06 --forecast-lenght 10 --pipeline-step all
 ```
 
 ## Extracting variables from WRF
@@ -47,6 +55,18 @@ Running this script to extract variables from WRF and perform lightning inferenc
 ```bash
 singularity shell --nv -B /explore/nobackup/projects/ilab,/explore/nobackup/projects/3sl,$NOBACKUP,/lscratch,/explore/nobackup/people /lscratch/jacaraba/container/wildfire-occurrence/
 python wrf_analysis.py 
+```
+
+## Generate output variables
+
+```bash
+singularity exec --env PYTHONPATH="/explore/nobackup/people/jacaraba/development/wildfire-occurrence" --nv -B /explore/nobackup/projects/ilab,/explore/nobackup/projects/3sl,$NOBACKUP,/lscratch,/explore/nobackup/people /lscratch/jacaraba/container/wildfire-occurrence python /explore/nobackup/people/$USER/development/wildfire-occurrence/wildfire_occurrence/view/wrf_pipeline_cli.py -c /explore/nobackup/people/$USER/development/wildfire-occurrence/wildfire_occurrence/templates/config.yaml --start-date 2023-06-29 --forecast-lenght 10 --pipeline-step postprocess
+```
+
+## Generate output variables
+
+```bash
+singularity exec --env PYTHONPATH="/explore/nobackup/people/jacaraba/development/wildfire-occurrence" --nv -B /explore/nobackup/projects/ilab,/explore/nobackup/projects/3sl,$NOBACKUP,/lscratch,/explore/nobackup/people /lscratch/jacaraba/container/wildfire-occurrence python /explore/nobackup/people/$USER/development/wildfire-occurrence/wildfire_occurrence/view/lightning_pipeline_cli.py -c /explore/nobackup/people/$USER/development/wildfire-occurrence/wildfire_occurrence/templates/config.yaml --pipeline-step preprocess
 ```
 
 ## Dataset Generation and Training

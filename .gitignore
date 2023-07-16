@@ -1,8 +1,14 @@
+# Removing grid for now
+notebooks/AlaskanTundraGrid.ipynb
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 .DS_Store
+scratch/
+*.out
+*.err
 
 # C extensions
 *.so

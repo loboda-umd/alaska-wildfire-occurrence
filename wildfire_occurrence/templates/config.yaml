@@ -26,32 +26,56 @@ wrf_output_filename: 'wrfout_d02_*_00:00:00'
 
 wrf_output_variables:
   - 'CFTotal'
-#  - 'CFLow'
-#  - 'CFMed'
-#  - 'CFHigh'
-#  - 'DZ700_850'
-#  - 'GPZ500'
-#  - 'GPZ700'
-#  - 'GPZ750'
-#  - 'GPZ850'
-#  - 'Helicity'
-#  - 'LCL'
-#  - 'PLI'
-#  - 'PW'
-#  - 'RAINTotal'
-#  - 'RH2'
-#  - 'RH500'
-#  - 'RH700'
-#  - 'RH800'
-#  - 'RH850'
-#  - 'SHOW'
-#  - 'SLP'
-#  - 'TD2'
-#  - 'TD500'
-#  - 'TT'
-#  - 'T2'
-#  - 'T500'
-#  - 'T750'
-#  - 'T850'
-#  - 'W500'
-#  - 'WA500'
+  - 'CFLow'
+  - 'CFMed'
+  - 'CFHigh'
+  - 'DZ700_850'
+  - 'GPZ500'
+  - 'GPZ700'
+  - 'GPZ750'
+  - 'GPZ850'
+  - 'Helicity'
+  - 'LCL'
+  - 'LFC'
+  - 'MCAPE'
+  - 'MCIN'
+  - 'PLI'
+  - 'PW'
+  - 'RAINTotal'
+  - 'RH2'
+  - 'RH500'
+  - 'RH700'
+  - 'RH800'
+  - 'RH850'
+  - 'SHOW'
+  - 'SLP'
+  - 'TD2'
+  - 'TD500'
+  - 'TT'
+  - 'T2'
+  - 'T500'
+  - 'T750'
+  - 'T850'
+  - 'W500'
+  - 'WA500'
+
+# Lightning Model Variables
+
+data_regex_list:
+  - /explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WRF_Simulations/2022-07-03/*.tif
+  - /explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WRF_Simulations/2022-05-09/*.tif
+  - /explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WRF_Simulations/2015*/*.tif
+  - /explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WRF_Simulations/2016*/*.tif
+
+validation_data_regex_list:
+  - /explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WRF_Simulations/2022-05-09/*.tif
+  - /explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WRF_Simulations/2015*/*.tif
+  - /explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WRF_Simulations/2016*/*.tif
+
+label_regex_list:
+  #- '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Alaska_Historical_Lightning/Tundra_Historical_Lightning_1986_2012_ImpactSystem_AlaskaAlbersNAD83.gpkg'
+  #- '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Alaska_Historical_Lightning/Tundra_Historical_Lightning_2012_2022_TOA_AlaskaAlbersNAD83.gpkg'
+  - '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Alaska_Historical_Lightning/Historical_Lightning_1986_2012_ImpactSystem_AlaskaAlbersNAD83.gpkg'
+  - '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Alaska_Historical_Lightning/Historical_Lightning_2012_2022_TOA_AlaskaAlbersNAD83.gpkg'
+
+lightning_data_dir: /explore/nobackup/projects/ilab/projects/LobodaTFO/development/lightning-alaska

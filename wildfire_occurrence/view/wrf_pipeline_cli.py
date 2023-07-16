@@ -16,7 +16,7 @@ from wildfire_occurrence.model.pipelines.wrf_pipeline import WRFPipeline
 def main():
 
     # Process command-line args.
-    desc = 'Use this application to perform CNN regression.'
+    desc = 'Use this application to run WRF on production.'
     parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument('-c',
