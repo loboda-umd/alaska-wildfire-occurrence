@@ -2,17 +2,14 @@ import sys
 import time
 import logging
 import argparse
-from datetime import date
-from wildfire_occurrence.model.common import valid_date
-from wildfire_occurrence.model.pipelines.lightning_pipeline \
+from wildfire_occurrence.pipelines.lightning_pipeline \
     import LightningPipeline
 
 
 # -----------------------------------------------------------------------------
 # main
 #
-# python lightning_pipeline_cli.py -c config.yaml -sd 2023-04-05 \
-#   -ed 2023-04-05 -s all
+# python lightning_pipeline_cli.py -c config.yaml -s all
 # -----------------------------------------------------------------------------
 def main():
 
@@ -67,6 +64,8 @@ def main():
     # WRF pipeline steps
     if "preprocess" in args.pipeline_step or "all" in args.pipeline_step:
         pipeline.preprocess()
+    if "train" in args.pipeline_step or "all" in args.pipeline_step:
+        pipeline.train()
     # if "geogrid" in args.pipeline_step or "all" in args.pipeline_step:
     #    pipeline.geogrid()
     # if "ungrib" in args.pipeline_step or "all" in args.pipeline_step:

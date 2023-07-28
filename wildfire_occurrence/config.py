@@ -43,19 +43,39 @@ class Config:
     # List for posprocessing of variables
     wrf_output_variables: Optional[List[str]] = field(
         default_factory=lambda: [
-            'CFTotal', 'CFLow', 'CFMed', 'CFHigh',
+            'CFTotal',
+            'CFLow',
+            'CFMed',
+            'CFHigh',
             'DZ700_850',
-            'GPZ500', 'GPZ700', 'GPZ750', 'GPZ850',
+            'GPZ500',
+            'GPZ700',
+            'GPZ750',
+            'GPZ850',
             'Helicity',
             'LCL',
-            'PLI', 'PW',
+            'LFC',
+            'MCAPE',
+            'MCIN',
+            'PLI',
+            'PW',
             'RAINTotal',
-            'RH2', 'RH500', 'RH700', 'RH800', 'RH850',
+            'RH2',
+            'RH500',
+            'RH700',
+            'RH800',
+            'RH850',
             'SHOW',
             'SLP',
-            'TD2', 'TD500',
-            'TT', 'T2', 'T500', 'T750', 'T850',
-            'W500', 'WA500'
+            'TD2',
+            'TD500',
+            'TT',
+            'T2',
+            'T500',
+            'T750',
+            'T850',
+            'W500',
+            'WA500'
         ]
     )
 
@@ -73,4 +93,17 @@ class Config:
     label_regex_list: Optional[List[str]] = field(
         default_factory=lambda: ['*.gpkg'])
 
-    lightning_data_dir: str = 'output'
+    # geometry file with area of interest
+    aoi_geometry_filename: Optional[str] = '*.gpkg'
+
+    # directory to output data
+    lightning_working_dir: Optional[str] = 'output'
+
+    # output filename for lightning database
+    lightning_output_filename: Optional[str] = 'my_database.gpkg'
+
+    # output filename for model
+    lightning_model_filename: Optional[str] = 'my_model.sav'
+
+    # aio
+    aoi: Optional[str] = 'Alaska'  # Alaska, Tundra, Boreal

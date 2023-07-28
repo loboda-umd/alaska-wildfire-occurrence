@@ -63,15 +63,18 @@ class LightningPipeline(object):
         # output_filename: str = None
 
         # what is this??????
-        self.delta_day = 0
-        self.delta_hour = 3
+        self.delta_day = 1
+        self.delta_hour = 0
 
-        # aoi shapefile
-        # self.aoi_regex = aoi_regex
-        # self.aoi_gdf = gpd.read_file(aoi_regex)
-        self.aoi_gdf = gpd.read_file('/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Geometries/Alaska_Tiger/tl_2018_02_anrc.shp')
+        # aoi geometry
+        self.aoi_gdf = gpd.read_file(self.conf.aoi_geometry_filename)
 
-        self.output_filename = 'my_database.gpkg' #output_filename
+        # define aoi based on options from configuration
+        # Alaska, Tundra, Boreal
+        if self.conf.aoi != 'Alaska':
+            self.aoi_gdf = self.aoi_gdf[self.aoi_gdf['Biome'] == self.conf.aoi]
+
+        self.aoi_gdf = self.aoi_gdf.to_crs('EPSG:3338')
 
     def preprocess(self):
 
@@ -79,11 +82,12 @@ class LightningPipeline(object):
         logging.info('Starting preprocess pipeline step')
 
         # Create output directory
-        os.makedirs(self.conf.lightning_data_dir, exist_ok=True)
+        os.makedirs(self.conf.lightning_working_dir, exist_ok=True)
+        logging.info(f'Created working dir: {self.conf.lightning_working_dir}')
 
         # Get data filenames
-        data_filenames = get_filenames(self.conf.data_regex_list)
-        logging.info(f'Found {len(data_filenames)} data filenames.')
+        simulation_dirs = get_filenames(self.conf.data_regex_list)
+        logging.info(f'Found {len(simulation_dirs)} data filenames.')
 
         # Get label filenames
         label_filenames = get_filenames(self.conf.label_regex_list)
@@ -92,53 +96,67 @@ class LightningPipeline(object):
         # Open label filenames, think of a better way
         label_epoch1_gdf = gpd.read_file(label_filenames[0])
         label_epoch2_gdf = gpd.read_file(label_filenames[1])
+        logging.info(f'Read {len(label_filenames)} label databases.')
 
         # select the timestamps we want
-        # we want time 0, time + 24, time + 48, etc.
+        # we want time time + 24, time + 48, time + (24 * n)
 
         # variable to store full dataset
         full_dataset = []
 
-        # iterate over each file
-        for filename in data_filenames:
+        # iterate over simulation directory
+        for simulation_dir in simulation_dirs:
 
-            # logging.info(f'Processing {filename}')
+            logging.info(f'Working on {simulation_dir} simulation dir')
 
-            # get datetime from WRF
-            date_m = re.search(
-                r'(?P<Y>\d{4})-(?P<m>\d{2})-(?P<d>\d{2})_' +
-                r'(?P<H>\d{2})-(?P<M>\d{2})-(?P<S>\d{2})', filename)
-            # print("date_m", date_m)
+            # get data filenames
+            data_filenames = sorted(get_filenames(
+                os.path.join(simulation_dir, 'variables', '*.tif')))
+            logging.info(f'Found {len(data_filenames)} data filenames.')
 
-            # convert date to datatime object
-            datetime_str = \
-                f'{date_m["Y"]}/{date_m["m"]}/{date_m["d"]} ' + \
-                f'{date_m["H"]}:{date_m["M"]}:{date_m["S"]}'
-            start_date = datetime.strptime(datetime_str, '%Y/%m/%d %H:%M:%S')
-            # print("start_date", start_date)
+            # remove first time step from initialization
+            data_filenames = data_filenames[1:]
+            logging.info('Removed file from first initialization time step')
 
-            # get the start date in the after time
-            # start_date = start_date + timedelta(
-            #        days=self.delta_day, hours=self.delta_hour)
+            for data_filename in data_filenames:
 
-            # check if the our is the beginning of the day
-            if start_date.hour == 0:
+                # get datetime from WRF
+                date_m = re.search(
+                    r'(?P<Y>\d{4})-(?P<m>\d{2})-(?P<d>\d{2})_' +
+                    r'(?P<H>\d{2})-(?P<M>\d{2})-(?P<S>\d{2})', data_filename)
 
-                logging.info(f'Getting points from: {filename}')
+                # convert date to datatime object
+                datetime_str = \
+                    f'{date_m["Y"]}/{date_m["m"]}/{date_m["d"]} ' + \
+                    f'{date_m["H"]}:{date_m["M"]}:{date_m["S"]}'
+                start_date = datetime.strptime(
+                    datetime_str, '%Y/%m/%d %H:%M:%S')
+
+                # get the start date in the after time
+                # start_date = start_date + timedelta(
+                #        days=self.delta_day, hours=self.delta_hour)
+
+                # check if the our is the beginning of the day
+                if start_date.hour != 0:
+                    continue
+
+                logging.info(f'Processing {Path(data_filename).stem}')
+                logging.info(f'Processing {start_date} date')
 
                 # get delta time + 1 day
                 end_date = start_date + timedelta(
                     days=self.delta_day, hours=self.delta_hour)
-                # print("end_date", end_date)
-                # print(start_date, end_date)
-                # print(start_date, end_date, filename)
 
+                # select database to choose from based on date
                 if start_date.year < 2012:
                     # get lightning rows
                     lightining_gdf = label_epoch1_gdf[
                         (label_epoch1_gdf['STRIKETIME'] > start_date) &
                         (label_epoch1_gdf['STRIKETIME'] < end_date)
                     ].reset_index(drop=True)
+                    # print(start_date, end_date, lightining_gdf.shape)
+                    lightining_gdf = lightining_gdf.to_crs('EPSG:3338')
+
                 else:
                     # get lightning rows
                     lightining_gdf = label_epoch2_gdf[
@@ -148,15 +166,16 @@ class LightningPipeline(object):
                     lightining_gdf = lightining_gdf[
                         lightining_gdf['STROKETYPE'] == 'GROUND_STROKE']
 
-                print(start_date, end_date, lightining_gdf.shape)
+                #print(start_date, end_date, lightining_gdf.shape)
 
                 # if we do not have any lightning events, continue
                 if lightining_gdf.shape[0] == 0:
                     continue
 
+                # save lightning database into disk
                 output_lightning_filename = os.path.join(
-                    self.conf.lightning_data_dir,
-                    f'{Path(filename).stem}-lightning.gpkg'
+                    self.conf.lightning_working_dir,
+                    f'{Path(data_filename).stem}-lightning.gpkg'
                 )
 
                 lightining_gdf.to_file(
@@ -164,11 +183,17 @@ class LightningPipeline(object):
                     driver='GPKG', layer='lightning')
 
                 # open raster with rioxarray and rasterio
-                raster = rxr.open_rasterio(filename)
-                rasterio_src = rasterio.open(filename)
+                raster = rxr.open_rasterio(data_filename)
+                rasterio_src = rasterio.open(data_filename)
+
+                #print("LIGHTNING CRS", lightining_gdf.crs)
+                #print("RASTER CRS", rasterio_src.crs)
+                #print("RASTER SHAPE", raster.shape)
 
                 # convert crs from lightning to match crs from WRF
+                #print(type(lightining_gdf))
                 lightining_gdf = lightining_gdf.to_crs(rasterio_src.crs)
+                #print("LIGHTNING CRS", lightining_gdf.crs)
                 aoi_gdf = self.aoi_gdf.to_crs(rasterio_src.crs)
 
                 # ------------------------------------------------------------
@@ -180,9 +205,11 @@ class LightningPipeline(object):
                             lightining_gdf['geometry'].y
                         ):
                     hits_coord_list.append((x, y))
+                #print(hits_coord_list)
 
                 # get wrf values from true lightining hits
                 hits_values = [x for x in rasterio_src.sample(hits_coord_list)]
+                #print(hits_values)
 
                 # create dataframe with hits and no hits
                 hits_df = pd.DataFrame(
@@ -196,13 +223,14 @@ class LightningPipeline(object):
                 hits_lightining_gdf['Label'] = 1
 
                 # remove rows with no-data values on WRF data
-                # print("BEFORE REMOVING NODATA", hits_lightining_gdf.shape)
-                hits_lightining_gdf = hits_lightining_gdf.dropna(
-                    subset=list(raster.attrs['long_name']))
+                print("BEFORE REMOVING NODATA", hits_lightining_gdf.shape)
+                #hits_lightining_gdf = hits_lightining_gdf.dropna(
+                #    subset=list(raster.attrs['long_name']))
                 print("AFTER REMOVING NODATA", hits_lightining_gdf.shape)
 
                 hits_lightining_gdf = hits_lightining_gdf[
                     hits_lightining_gdf['geometry'].notna()]
+                print("AFTER REMOVING GEOMETRY", hits_lightining_gdf.shape)
 
                 if hits_lightining_gdf.shape[0] == 0:
                     continue
@@ -227,12 +255,11 @@ class LightningPipeline(object):
 
                     if coord not in hits_coord_list and \
                             aoi_gdf.contains(Point(coord)).any():
-                    # if coord not in hits_coord_list:
                         for wrf_value in rasterio_src.sample([coord]):
-                            if not np.isnan(wrf_value).any():
-                                no_hits_coord_list.append(coord)
-                                no_hits_values.append(wrf_value)
-                                n_false_points += 1
+                            #if not np.isnan(wrf_value).any():
+                            no_hits_coord_list.append(coord)
+                            no_hits_values.append(wrf_value)
+                            n_false_points += 1
 
                 # create dataframe with hits and no hits
                 no_hits_df = pd.DataFrame(
@@ -270,6 +297,7 @@ class LightningPipeline(object):
                 full_dataset.append(
                     concatenated
                 )
+                print("CONCATENATED", concatenated.shape)
 
         full_dataset = pd.concat(full_dataset, axis=0)
 
@@ -278,23 +306,35 @@ class LightningPipeline(object):
         print(full_dataset[full_dataset['geometry'].isna()])
 
         # print(full_dataset)
-        full_dataset = full_dataset.dropna(axis='columns')
+        # full_dataset = full_dataset.dropna(axis='columns')
         # post_columns = full_dataset.columns
         # print(list(set(original_columns) - set(post_columns)))
         print("THE SIZE OF MY FINAL", full_dataset.shape)
 
+        full_dataset = full_dataset.drop(['LOCALDATET', 'STRIKETIME', 'UTCDATETIME', 'LOCALDATETIME'], axis=1)
+
         # print(full_dataset.columns)
         # print(type(full_dataset))
         full_dataset.to_file(
-            self.output_filename, driver='GPKG', layer='dataset')
+            self.conf.lightning_output_filename,
+            driver='GPKG', layer='dataset')
 
         return
 
-    def train(self, dataset, model_filename):
+    def train(self):
 
         # read training dataset
-        dataset = gpd.read_file(dataset)
+        dataset = gpd.read_file(self.conf.lightning_output_filename)
         print("Dataset shape: ", dataset.shape)
+
+
+        dataset = dataset.drop([
+            'index', 'OBJECTID', 'LAT', 'LON', 'SIGNALSTRE', 'MULTIPLICI', 'Biome', 'Severity',
+            'OID_', 'STROKETYPE', 'NETWORKCODE', 'MILLISECONDS', 'LATITUDE', 'LONGITUDE',
+            'AMPLITUDE', 'GDOP', 'ERRSEMIMAJOR', 'ERRSEMIMINOR', 'ERRELIPSEANGLE',
+            'STRIKESEQNUMBER', 'POLARITY', 'MCAPE', 'LFC', 'MCIN',
+        ], axis=1).dropna(axis=0, how='any')
+
 
         # drop geometry and bands with nodata
         dataset = dataset.dropna(axis='columns')
@@ -308,14 +348,14 @@ class LightningPipeline(object):
         # random forest depth and size
         # We set the number of trees to 500 and the
         # number of variables at each split as 8 in the RF algorithm.
-        n_estimators = 500
+        n_estimators = 600
         max_depth = 10
 
         X_train, X_test, y_train, y_test = sk_train_test_split(
             dataset.drop(['Label'], axis='columns'),
             dataset['Label'],
             random_state=0,
-            train_size=0.70,
+            train_size=0.90,
             stratify=dataset['Label']  # TODO: double check what this means
         )
 
@@ -382,7 +422,7 @@ class LightningPipeline(object):
         print(model.feature_importances_)
 
         # save
-        dump(trained_RF, model_filename)
+        dump(trained_RF, self.conf.lightning_model_filename)
 
         return
 
@@ -557,30 +597,49 @@ class LightningPipeline(object):
         print("Log Loss: ", log_loss(dataset['Label'], prediction_probabilities[:, 1]))
 
 
-
 # -----------------------------------------------------------------------------
 # Invoke the main
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
 
+    # Missing things:
+    # - label the PSA regions with tundra vs. boreal
+    # - label the observation with severity level
+    # - label the observation with which day of the forecast it is
+
+    # -------------------------------------------------------------------------
+    # 1. Generate Tundra-only Dataset
+    # -------------------------------------------------------------------------
+    lightning_model = LightningPipeline(
+        '/explore/nobackup/people/jacaraba/development/wildfire-occurrence/projects/lightning/tundra.yaml'
+    )
+
+
+    # 2. Generate Boreal Alaska-only Dataset
+
+    # 3. Combine both Datasets
+
+
+
+
     # Generate Dataset
-    data_regex = '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WRF_Simulations/*/*.tif'
-    label_regex = [
-        '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Alaska_Historical_Lightning/Tundra_Historical_Lightning_1986_2012_ImpactSystem_AlaskaAlbersNAD83.gpkg',
-        '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Alaska_Historical_Lightning/Tundra_Historical_Lightning_2012_2022_TOA_AlaskaAlbersNAD83.gpkg'
-    ]
+    #data_regex = '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WRF_Simulations/*/*.tif'
+    #label_regex = [
+    #    '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Alaska_Historical_Lightning/Tundra_Historical_Lightning_1986_2012_ImpactSystem_AlaskaAlbersNAD83.gpkg',
+    #    '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Alaska_Historical_Lightning/Tundra_Historical_Lightning_2012_2022_TOA_AlaskaAlbersNAD83.gpkg'
+    #]
     #aoi_regex = '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Geometries/Alaskan_Tundra/Alaska_tundra_merged.shp'
-    aoi_regex = '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Geometries/Alaska_Tiger/tl_2018_02_anrc.shp'
-    output_filename = '/explore/nobackup/projects/ilab/projects/LobodaTFO/labels/Lightning_Training_Dataset_New_Balanced_Real_24h-AllAlaska.gpkg'
+    #aoi_regex = '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Geometries/Alaska_Tiger/tl_2018_02_anrc.shp'
+    #output_filename = '/explore/nobackup/projects/ilab/projects/LobodaTFO/labels/Lightning_Training_Dataset_New_Balanced_Real_24h-AllAlaska.gpkg'
 
     # initialize ligthning object
-    lightning_model = LightningPipeline(
-        #data_regex=data_regex,
-        #label_regex=label_regex,
-        #aoi_regex=aoi_regex,
-        #output_filename=output_filename
-        '/explore/nobackup/people/jacaraba/development/wildfire-occurrence/wildfire_occurrence/templates/config.yaml'
-    )
+    #lightning_model = LightningPipeline(
+    #    #data_regex=data_regex,
+    #    #label_regex=label_regex,
+    #    #aoi_regex=aoi_regex,
+    #    #output_filename=output_filename
+    #    '/explore/nobackup/people/jacaraba/development/wildfire-occurrence/wildfire_occurrence/templates/config.yaml'
+    #)
 
     # lightning_model_2023-05-08_balanced_real
 
@@ -614,7 +673,7 @@ if __name__ == "__main__":
     #)
 
     
-    data_regex = '/explore/nobackup/projects/ilab/projects/LobodaTFO/operations/2023-06-29_2023-07-09/variables/*.tif'
+    #data_regex = '/explore/nobackup/projects/ilab/projects/LobodaTFO/operations/2023-06-29_2023-07-09/variables/*.tif'
 
     """
     # random forest
@@ -640,12 +699,12 @@ if __name__ == "__main__":
     )
     """
 
-    model_filename = '/explore/nobackup/projects/ilab/projects/LobodaTFO/labels/LightningModel_Balanced_Real_24h_AllAlaska.sav'
-    output_dir = '/explore/nobackup/projects/ilab/projects/LobodaTFO/operations/2023-06-29_2023-07-09/lightning-xgboost-alaska'
+    #model_filename = '/explore/nobackup/projects/ilab/projects/LobodaTFO/labels/LightningModel_Balanced_Real_24h_AllAlaska.sav'
+    #output_dir = '/explore/nobackup/projects/ilab/projects/LobodaTFO/operations/2023-06-29_2023-07-09/lightning-xgboost-alaska'
 
-    lightning_model.predict(
-        model_filename=model_filename,
-        data_regex=data_regex,
-        output_dir=output_dir,
-        aoi_gdf=gpd.read_file(aoi_regex)
-    )
+    #lightning_model.predict(
+    #    model_filename=model_filename,
+    #    data_regex=data_regex,
+    #    output_dir=output_dir,
+    #    aoi_gdf=gpd.read_file(aoi_regex)
+    #)

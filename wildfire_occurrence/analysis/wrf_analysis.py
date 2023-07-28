@@ -35,6 +35,7 @@ class WRFAnalysis(object):
         # get CRS from xwrf consolidation
         self.crs = CRS.from_string(
             str(self.wrf_dataset['wrf_projection'].values))
+        print("CRSSSSSSS", self.crs)
 
         # assign crs to override crs=None and to be compliant with rioxarray
         self.wrf_dataset.rio.write_crs(self.crs, inplace=True)
@@ -425,87 +426,145 @@ class WRFAnalysis(object):
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
 
-    filename_regex = \
-        '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/' + \
-        'WRF_Simulations/2022-07-03/wrfout_d02*'
 
-    filename_regex = \
-        '/explore/nobackup/projects/ilab/projects/LobodaTFO/operations/' + \
-        '2023-06-24_2023-07-04/output/wrfout_d02*'
-    data_filenames = glob(filename_regex)
+    date_to_process = [
+        '2005-08-16_2005-08-18',
+        '2008-06-25_2008-06-27',
+        '2013-06-20_2013-06-22',
+        '2015-07-14_2015-07-16',
+        '2019-08-04_2019-08-14',
+        '2022-05-09_2022-05-19',
+        '2005-06-11_2005-06-13',
+    ]
 
-    for filename in data_filenames:
+    """
+    date_to_process = [
+        '2007-07-04_2007-07-06',
+        '2009-06-09_2009-06-11',
+        '2013-08-16_2013-08-18',
+        '2015-07-23_2015-07-25',
+        '2019-08-19_2019-08-29',
+        '2022-07-03_2022-07-13',
+        '2005-06-29_2005-07-01',
+        '2007-07-11_2007-07-13',
+        '2010-07-01_2010-07-03'
+    ]
+    """
+    # /explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WRF_Simulations/2003-06-23
 
-        # /explore/nobackup/projects/ilab/projects/LobodaTFO/data/WRF_Data/WRF_Simulations/*/wrfout_d02*
-        # create WRFAnalysis object, stores wrf_dataset
-        wrf_analysis = WRFAnalysis(filename)
 
-        # output variables for the lightning model
-        # these are the variables of importance between both 24 and 48 models
-        # output_variables = [
-        #    'PLI', 'GPZ500', 'GPZ700', 'TD500', 'CFTotal',
-        #    'RH500', 'SLP', 'W500', 'RH700', 'CFLow', 'TD2',
-        #    'TT', 'Helicity', 'GPZ850', 'SHOW', 'LCL',
-        #    'RH2', 'T850', 'RH850', 'Rain', 'T2', 'DZ700_850',
-        #    'RH800', 'T500', 'PW', 'T750'
-        # ] # BT missing
+    output_variables = [
+        'CFTotal',
+        'CFLow',
+        'CFMed',
+        'CFHigh',
+        'DZ700_850',
+        'GPZ500',
+        'GPZ700',
+        'GPZ750',
+        'GPZ850',
+        'Helicity',
+        'LCL',
+        'LFC',
+        'MCAPE',
+        'MCIN',
+        'PLI',
+        'PW',
+        'RAINTotal',
+        'RH2',
+        'RH500',
+        'RH700',
+        'RH800',
+        'RH850',
+        'SHOW',
+        'SLP',
+        'TD2',
+        'TD500',
+        'TT',
+        'T2',
+        'T500',
+        'T750',
+        'T850',
+        'W500',
+        'WA500'
+    ]
 
-        output_variables = [
-            'CFTotal', 'CFLow', 'CFMed', 'CFHigh',
-            'DZ700_850',
-            'GPZ500', 'GPZ700', 'GPZ750', 'GPZ850',
-            'Helicity',
-            'LCL', 'LFC',
-            'MCAPE', 'MCIN',
-            'PLI', 'PW',
-            'RAINTotal',
-            'RH2', 'RH500', 'RH700', 'RH800', 'RH850',
-            'SHOW',
-            'SLP',
-            'TD2', 'TD500',
-            'TT', 'T2', 'T500', 'T750', 'T850',
-            'W500', 'WA500'
-        ]  # BT missing
 
-        # looks good - Helicity, SLP, 'GPZ500', 'TD500', 'RH500',
-        # 'TD2', 'LCL', 'PW', 'RH2', 'RAINTotal'
-        # TT, TC500
-        # wrong - PLI
-        # maybe
-        #   CFTotoal (wrong, local is 0, ours is higher)
-        #   CFlow (wrong, local is 0, ours is higher)
-        #   CFMed  (wrong, local is 0, ours is higher)
-        #   CFHigh (wrong, local is 0, ours is higher)
-        #   'GPZ750' no-data problems, kind of similar
-        #   'GPZ700' no local data to compare to
-        #   'RH700' no local data to compare to
-        #   'GPZ850' no local data to compare to
-        #   'SHOW' wrong because of no data
-        #   'T500' no local data to compare to
-        #    'RH800' wrong because of no data
-        #    'T2' numbers look far away - our T2 is in Kelvin
-        #    'RH850' no local data to compare to
-        #    'T850' no local data to compare to
-        #   'W500'
-        #   'WA500' -looks good
-        #  'DZ700_850' - looks good
-        # 'BT' missing
+    for dataset_file in date_to_process:
 
-        output_dir = 'output'  # os.path.dirname(os.path.abspath(filename))
+        data_dir = '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/' + \
+            f'WRF_Data/WRF_Simulations/{dataset_file}'
 
-        # TODO: make this for loop parallel later
-        for t_idx, delta_time in enumerate(
-                wrf_analysis.wrf_dataset.Times.values):
+        filename_regex = os.path.join(data_dir, 'wrfout_d02*')
 
-            logging.info(f'Processing t_idx: {t_idx}, timestamp: {delta_time}')
-            output_filename = os.path.join(
-                output_dir,
-                f"d02_{delta_time.astype(str).replace(':', '-')}.tif")
+        output_dir = os.path.join(data_dir, 'variables')
+        os.makedirs(output_dir, exist_ok=True)
 
-            if not os.path.isfile(output_filename):
+        # get data filenames to process
+        data_filenames = glob(filename_regex)
 
-                wrf_analysis.compute_all_and_write(
-                    timeidx=t_idx,
-                    output_variables=output_variables,
-                    output_filename=output_filename
-                )
+        # iterate over each filename
+        for filename in data_filenames:
+
+            # create WRFAnalysis object, stores wrf_dataset
+            wrf_analysis = WRFAnalysis(filename)
+
+            """
+            for t_idx, delta_time in enumerate(
+                    wrf_analysis.wrf_dataset.Times.values):
+
+                logging.info(f'Processing t_idx: {t_idx}, timestamp: {delta_time}')
+                output_filename = os.path.join(
+                    output_dir,
+                    f"d02_{delta_time.astype(str).replace(':', '-')}.tif")
+
+                if not os.path.isfile(output_filename):
+
+                    wrf_analysis.compute_all_and_write(
+                        timeidx=t_idx,
+                        output_variables=output_variables,
+                        output_filename=output_filename
+                    )
+            """
+
+    for dataset_dir in glob('/explore/nobackup/projects/ilab/projects/LobodaTFO/operations/*'):
+
+        em_real_dir = os.path.join(dataset_dir, 'em_real')
+        if not os.path.exists(em_real_dir):
+            continue
+
+        output_dir = os.path.join(dataset_dir, 'output')
+        if not os.path.exists(output_dir):
+            continue
+
+        data_filenames = glob(os.path.join(output_dir, 'wrfout_d02*'))
+        if len(data_filenames) < 1:
+            continue
+
+        # print(wrfoutput_filename[0])
+        output_dir = os.path.join(dataset_dir, 'new_variables')
+        os.makedirs(output_dir, exist_ok=True)
+
+        # iterate over each filename
+        for filename in data_filenames:
+
+            # create WRFAnalysis object, stores wrf_dataset
+            wrf_analysis = WRFAnalysis(filename)
+
+            """
+            for t_idx, delta_time in enumerate(
+                    wrf_analysis.wrf_dataset.Times.values):
+
+                print(f'Processing t_idx: {t_idx}, timestamp: {delta_time}')
+                output_filename = os.path.join(
+                    output_dir,
+                    f"d02_{delta_time.astype(str).replace(':', '-')}.tif")
+
+                if not os.path.isfile(output_filename):
+
+                    wrf_analysis.compute_all_and_write(
+                        timeidx=t_idx,
+                        output_variables=output_variables,
+                        output_filename=output_filename
+                    )
+            """
