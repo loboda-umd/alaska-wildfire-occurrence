@@ -109,4 +109,4 @@ class Config:
     lightning_data_dir: Optional[str] = 'my_model'
 
     # aio
-    aoi: Optional[str] = 'Alaska'  # Alaska, Tundra, Boreal
+    aoi_geometry: Optional[str] = 'Alaska'  # Alaska, Tundra, Boreal
