@@ -3,8 +3,8 @@ import time
 import logging
 import argparse
 from datetime import date
-from wildfire_occurrence.model.common import valid_date
-from wildfire_occurrence.model.pipelines.wrf_pipeline import WRFPipeline
+from wildfire_occurrence.common import valid_date
+from wildfire_occurrence.pipelines.wrf_pipeline import WRFPipeline
 
 
 # -----------------------------------------------------------------------------
