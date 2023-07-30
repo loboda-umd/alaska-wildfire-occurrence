@@ -105,5 +105,8 @@ class Config:
     # output filename for model
     lightning_model_filename: Optional[str] = 'my_model.sav'
 
+    # data dir for lightning model
+    lightning_data_dir: Optional[str] = 'my_model'
+
     # aio
     aoi: Optional[str] = 'Alaska'  # Alaska, Tundra, Boreal
