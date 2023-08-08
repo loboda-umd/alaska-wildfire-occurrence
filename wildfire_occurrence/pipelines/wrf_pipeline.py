@@ -477,8 +477,7 @@ class WRFPipeline(object):
         self.conf.wrf_config['end_hour'] = self.end_date.strftime('%H')
 
         # Setup num_grid_levels based on year - 34 levels after June 12, 2019
-        if self.conf.wrf_config['start_year'] == 2019 and \
-            self.conf.wrf_config['start_month'] == 6:
+        if self.start_date < datetime.datetime(2019, 6, 12):
             self.conf.wrf_config['num_metgrid_levels'] = 32
         else:
             self.conf.wrf_config['num_metgrid_levels'] = 34

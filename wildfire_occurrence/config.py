@@ -93,6 +93,9 @@ class Config:
     label_regex_list: Optional[List[str]] = field(
         default_factory=lambda: ['*.gpkg'])
 
+    # aoi to select from, select between Alaska, Boreal, Tundra
+    aoi: Optional[str] = 'Alaska'
+
     # geometry file with area of interest
     aoi_geometry_filename: Optional[str] = '*.gpkg'
 
@@ -107,6 +110,3 @@ class Config:
 
     # data dir for lightning model
     lightning_data_dir: Optional[str] = 'my_model'
-
-    # aio
-    aoi_geometry: Optional[str] = 'Alaska'  # Alaska, Tundra, Boreal

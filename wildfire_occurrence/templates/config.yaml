@@ -77,7 +77,9 @@ label_regex_list:
   #- '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Alaska_Historical_Lightning/Tundra_Historical_Lightning_2012_2022_TOA_AlaskaAlbersNAD83.gpkg'
   - '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Alaska_Historical_Lightning/Historical_Lightning_1986_2012_ImpactSystem_AlaskaAlbersNAD83.gpkg'
   - '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Alaska_Historical_Lightning/Historical_Lightning_2012_2022_TOA_AlaskaAlbersNAD83.gpkg'
+  #- 2023
 
 lightning_data_dir: /explore/nobackup/projects/ilab/projects/LobodaTFO/development/lightning-alaska
 
-aoi_geometry: '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Geometries/Alaska_Predictive_Service_Areas/Alaska_Predictive_Services_Areas_Biomes.gpkg'
+aoi: Alaska
+aoi_geometry_filename: '/explore/nobackup/projects/ilab/projects/LobodaTFO/data/Geometries/Alaska_Predictive_Service_Areas/Alaska_Predictive_Services_Areas_Biomes.gpkg'
