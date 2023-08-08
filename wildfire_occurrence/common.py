@@ -50,4 +50,4 @@ def get_filenames(data_regex: str) -> list:
     else:
         filenames = glob(data_regex)
     assert len(filenames) > 0, f'No files under {data_regex}'
-    return sorted(filenames)
+    return filenames

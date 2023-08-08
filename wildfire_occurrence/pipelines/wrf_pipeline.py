@@ -476,6 +476,13 @@ class WRFPipeline(object):
         self.conf.wrf_config['start_hour'] = self.start_date.strftime('%H')
         self.conf.wrf_config['end_hour'] = self.end_date.strftime('%H')
 
+        # Setup num_grid_levels based on year - 34 levels after June 12, 2019
+        if self.conf.wrf_config['start_year'] == 2019 and \
+            self.conf.wrf_config['start_month'] == 6:
+            self.conf.wrf_config['num_metgrid_levels'] = 32
+        else:
+            self.conf.wrf_config['num_metgrid_levels'] = 34
+
         # Fill in elements from the WRF environment and save filename
         template.stream(self.conf.wrf_config).dump(self.wrf_conf_filename)
         logging.info(f'Saved WRF configuration at {self.wrf_conf_filename}')
