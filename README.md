@@ -17,11 +17,12 @@ Wildfire occurrence modeling using Terrestrial Ecosystem Models and Artificial I
 
 [CG Lightning Probability Forecast](https://huggingface.co/spaces/jordancaraballo/alaska-wildfire-occurrence)
 
-## Exercises
+## Tutorial Exercises
 
 | Lecture Topic | Interactive Link | 
 |---|---|
 | **Python Spatial Visualization** | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nasa-nccs-hpda/wildfire-occurrence/blob/main/notebooks/intern/LightningVisualization.ipynb) |
+| **Python ALDN Validation** | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/nasa-nccs-hpda/wildfire-occurrence/blob/main/notebooks/intern/ALDN-Validation.ipynb) |
 
 ## Objectives
 
@@ -42,7 +43,7 @@ singularity build --sandbox /lscratch/$USER/container/wildfire-occurrence docker
 
 ## Quickstart
 
-### Executing WRF
+### Running WRF
 
 ```bash
 conda activate ilab-pytorch; PYTHONPATH="/explore/nobackup/people/$USER/development/wildfire-occurrence" python /explore/nobackup/people/$USER/development/wildfire-occurrence/wildfire_occurrence/view/wrf_pipeline_cli.py -c /explore/nobackup/people/$USER/development/wildfire-occurrence/wildfire_occurrence/templates/config.yaml --start-date 2023-06-06 --forecast-lenght 10 --pipeline-step all
